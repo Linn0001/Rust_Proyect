@@ -29,6 +29,3 @@ make
 ```bash
 ./proyecto_rust_base ../input/test.rs
 ```
-
-Este proyecto es solo una *base*: casi todos los métodos tienen `TODO` para que el grupo implemente
-la lógica del compilador.
