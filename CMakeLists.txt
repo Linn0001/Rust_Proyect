@@ -14,13 +14,10 @@ add_executable(Rust_Project
         src/lexic/scanner.cpp
         src/lexic/token.cpp
 
-        src/syntactic/Exp.h
-        src/syntactic/Visitor.h
-
-        src/semantic/CodeGen.cpp
-        src/semantic/TypeCheck.cpp
         src/syntactic/parser.cpp
         src/syntactic/parser.h
         src/syntactic/ast.cpp
         src/syntactic/ast.h
+        src/semantic/visitor.cpp
+        src/semantic/visitor.h
 )

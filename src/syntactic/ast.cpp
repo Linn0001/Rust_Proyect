@@ -70,6 +70,12 @@ IfStm::IfStm(Exp* c, Body* t, Body* e)
 WhileStm::WhileStm(Exp* c, Body* t)
     : cond(c), b(t) {}
 
+//                     ExpAsStm
+ExpAsStm::ExpAsStm(Exp *e) : e(e) {}
+
+ExpAsStm::~ExpAsStm() {}
+
+
 //                     VarDec
 VarDec::VarDec() {}
 

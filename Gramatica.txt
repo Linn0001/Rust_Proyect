@@ -26,6 +26,7 @@ Stmt          ::= id "=" CExp
                 | "while" CExp "{" Body "}"
 		        | "for"   CExp .....
                 | "return" [ CExp ]
+                | CExp
 
 CExp          ::= Exp [ ( ">" | ">=" | "<" | "<=" | "==" ) Exp ]
 

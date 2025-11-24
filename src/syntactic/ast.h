@@ -45,7 +45,7 @@ public:
     BinaryOp op;
 
     BinaryExp(Exp* l, Exp* r, BinaryOp op);
-    // int accept(Visitor* visitor);
+    int accept(Visitor* visitor);
     ~BinaryExp();
 };
 
@@ -54,7 +54,7 @@ public:
     int val;
 
     NumberExp(int v);
-    // int accept(Visitor* visitor);
+    int accept(Visitor* visitor);
     ~NumberExp();
 };
 
@@ -63,7 +63,7 @@ public:
     bool val;
 
     BoolExp(bool v);
-    // int accept(Visitor* visitor);
+    int accept(Visitor* visitor);
     ~BoolExp();
 };
 
@@ -72,7 +72,7 @@ public:
     string val;
 
     IdExp(string v);
-    // int accept(Visitor* visitor);
+    int accept(Visitor* visitor);
     ~IdExp();
 };
 
@@ -82,7 +82,7 @@ public:
     vector<Exp*> args;
 
     FCallExp() {}
-    // int accept(Visitor* visitor);
+    int accept(Visitor* visitor);
     ~FCallExp() {}
 };
 
@@ -90,7 +90,7 @@ public:
 // Clase base: Stm (statements)
 class Stm {
 public:
-    // virtual int accept(Visitor* visitor) = 0;
+    virtual int accept(Visitor* visitor) = 0;
     virtual ~Stm() = 0;
 };
 
@@ -103,7 +103,7 @@ public:
     string name;
 
     VarDec();
-    // int accept(Visitor* visitor);
+    int accept(Visitor* visitor);
     ~VarDec();
 };
 
@@ -115,7 +115,7 @@ public:
     list<VarDec*> decs;
 
     Body();
-    // int accept(Visitor* visitor);
+    int accept(Visitor* visitor);
     ~Body();
 };
 
@@ -128,7 +128,7 @@ public:
     Body* els;
 
     IfStm(Exp* condition, Body* then, Body* els);
-    // int accept(Visitor* visitor);
+    int accept(Visitor* visitor);
     ~IfStm() {};
 };
 
@@ -138,7 +138,7 @@ public:
     Body* b;
 
     WhileStm(Exp* condition, Body* b);
-    // int accept(Visitor* visitor);
+    int accept(Visitor* visitor);
     ~WhileStm() {};
 };
 
@@ -148,7 +148,7 @@ public:
     Exp* e;
 
     AssignStm(string, Exp*);
-    // int accept(Visitor* visitor);
+    int accept(Visitor* visitor);
     ~AssignStm();
 };
 
@@ -157,7 +157,7 @@ public:
     Exp* e;
 
     PrintStm(Exp*);
-    // int accept(Visitor* visitor);
+    int accept(Visitor* visitor);
     ~PrintStm();
 };
 
@@ -166,9 +166,18 @@ public:
     Exp* e;
 
     ReturnStm() {}
-    // int accept(Visitor* visitor);
+    int accept(Visitor* visitor);
     ~ReturnStm() {}
 };
+
+// class ExpAsStm : public Stm {
+// public:
+//     Exp* e;
+//
+//     ExpAsStm(Exp* e);
+//     // int accept(Visitor* visitor);
+//     ~ExpAsStm();
+// };
 
 
 // Declaraciones de funciones
@@ -181,7 +190,7 @@ public:
     vector<string> pnames;
 
     FunDec() {}
-    // int accept(Visitor* visitor);
+    int accept(Visitor* visitor);
     ~FunDec() {}
 };
 
@@ -193,7 +202,7 @@ public:
     list<FunDec*> fdlist;
 
     Program() {}
-    // int accept(Visitor* visitor);
+    int accept(Visitor* visitor);
     ~Program() {}
 };
 
