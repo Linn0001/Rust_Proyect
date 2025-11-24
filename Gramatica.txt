@@ -6,7 +6,7 @@ VarDecList    ::= ( VarDec )*
 
 FunDecList    ::= ( FunDec )+   ; debe haber al menos una en el programa final
 
-FunDec        ::= "fn" id "(" [ ParamDecList ] ")" "->" Type "{" Body "}"
+FunDec        ::= "fn" id "(" [ ParamDecList ] ")" ["->" Type] "{" Body "}"
 
 Body          ::= VarDecList StmtList
 
@@ -22,9 +22,9 @@ StmtList      ::= Stmt { ";" Stmt }
 
 Stmt          ::= id "=" CExp
                 | "println!" "(" CExp ")"
-                | "if" CExp "then" Body ["else" Body] "endif"
-                | "while" CExp "do" Body "endwhile"
-		| "for"   CExp [ "else" CExp ]
+                | "if" CExp "{" Body ["else" Body] "}"
+                | "while" CExp "{" Body "}"
+		        | "for"   CExp .....
                 | "return" [ CExp ]
 
 CExp          ::= Exp [ ( ">" | ">=" | "<" | "<=" | "==" ) Exp ]

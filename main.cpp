@@ -34,13 +34,18 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+
 #include "src/lexic/scanner.h"
 #include "src/lexic/token.h"
+#include "src/syntactic/parser.h"
+#include "src/syntactic/ast.h"
 
 using namespace std;
 
+// Función del scanner definida en scanner.cpp
 extern int ejecutar_scanner(Scanner* scanner, const string& InputFile);
 
+// Leer archivo completo
 string loadFile(const string& filename) {
     ifstream in(filename);
     if (!in.is_open()) {
@@ -55,19 +60,47 @@ string loadFile(const string& filename) {
 int main(int argc, char* argv[]) {
 
     if (argc < 2) {
-        cout << "Uso: ./program <archivo.rs>" << endl;
+        cout << "Uso: ./Rust_Project <archivo.rs>" << endl;
         return 1;
     }
 
     string inputFile = argv[1];
     string code = loadFile(inputFile);
 
-    // Crear el scanner
-    Scanner scanner(code.c_str());
+    cout << "=== Código fuente cargado ===\n\n";
+    cout << code << "\n\n";
 
-    // Ejecutar scanner
+    // ----------------------------
+    // 1. Ejecutar el SCANNER
+    // ----------------------------
+    cout << "=== Ejecutando SCANNER ===\n";
+
+    Scanner scanner(code.c_str());
     ejecutar_scanner(&scanner, inputFile);
+
+    // ----------------------------
+    // 2. Ejecutar el PARSER
+    // ----------------------------
+    cout << "\n=== Ejecutando PARSER ===\n";
+
+    try {
+        // IMPORTANTE: un parser necesita un scanner nuevo
+        Scanner* parserScanner = new Scanner(code.c_str());
+        Parser* parser = new Parser(parserScanner);
+
+        Program* prog = parser->parseProgram();
+
+        cout << "\n>>> Parser exitoso\n";
+
+        delete prog;
+        delete parser;
+        delete parserScanner;
+    }
+    catch (exception& ex) {
+        cout << "\n*** Error en parser: " << ex.what() << " ***\n";
+    }
 
     return 0;
 }
+
 

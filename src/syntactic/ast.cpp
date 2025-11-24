@@ -1,9 +1,8 @@
 #include "ast.h"
 #include <iostream>
-
 using namespace std;
 
-// ------------------ Exp ------------------
+//                      Exp
 Exp::~Exp() {}
 
 string Exp::binopToChar(BinaryOp op) {
@@ -13,66 +12,73 @@ string Exp::binopToChar(BinaryOp op) {
         case MUL_OP:   return "*";
         case DIV_OP:   return "/";
         case GT_OP:    return ">";
-        case GE_OP:     return ">=";
+        case GE_OP:    return ">=";
         case LT_OP:    return "<";
-        case LE_OP:     return "<=";
-        case EQ_OP:   return "==";
+        case LE_OP:    return "<=";
+        case EQ_OP:    return "==";
         default:       return "?";
     }
 }
 
-// ------------------ BinaryExp ------------------
+//                     BinaryExp
 BinaryExp::BinaryExp(Exp* l, Exp* r, BinaryOp o)
     : left(l), right(r), op(o) {}
 
-    
 BinaryExp::~BinaryExp() {
     delete left;
     delete right;
 }
 
-// ------------------ NumberExp ------------------
-NumberExp::NumberExp(int v) : value(v) {}
+//                     NumberExp
+NumberExp::NumberExp(int v) : val(v) {}
 
 NumberExp::~NumberExp() {}
 
-// ------------------idExp ------------------
+//                     BoolExp
+BoolExp::BoolExp(bool v) : val(v) {}
+
+BoolExp::~BoolExp() {}
+
+//                     IdExp
 IdExp::IdExp(string v) : val(v) {}
 
 IdExp::~IdExp() {}
 
-//
-Stm::~Stm(){}
+//                     Stm (base)
+Stm::~Stm() {}
 
-PrintStm::~PrintStm(){}
-
-AssignStm::~AssignStm(){}
-
-IfStm::IfStm(Exp* c, Body* t, Body* e): condition(c), then(t), els(e) {}
-
-WhileStm::WhileStm(Exp* c, Body* t): condition(c), b(t) {}
-
-
-PrintStm::PrintStm(Exp* expresion){
-    e=expresion;
+//                     PrintStm
+PrintStm::PrintStm(Exp* expresion) {
+    e = expresion;
 }
 
-AssignStm::AssignStm(string variable,Exp* expresion){
+PrintStm::~PrintStm() {}
+
+//                     AssignStm
+AssignStm::AssignStm(string variable, Exp* expresion) {
     id = variable;
     e = expresion;
 }
 
+AssignStm::~AssignStm() {}
 
+//                     IfStm
+IfStm::IfStm(Exp* c, Body* t, Body* e)
+    : cond(c), then(t), els(e) {}
 
+//                     WhileStm
+WhileStm::WhileStm(Exp* c, Body* t)
+    : cond(c), b(t) {}
+
+//                     VarDec
 VarDec::VarDec() {}
 
 VarDec::~VarDec() {}
 
-Body::Body(){
-    declarations=list<VarDec*>();
-    StmList=list<Stm*>();
+//                     Body
+Body::Body() {
+    decs = list<VarDec*>();
+    stmlist = list<Stm*>();
 }
 
-Body::~Body(){}
-
-
+Body::~Body() {}

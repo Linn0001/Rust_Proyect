@@ -5,7 +5,7 @@ fn main() {
     x = 1;
     y = 10;
     z = 1000000;
-    println!("{}", x)
-    println!("{}", y)
-    println!("{}", z)
+    println!("{}", x);
+    println!("{}", y);
+    println!("{}", z);
 }
