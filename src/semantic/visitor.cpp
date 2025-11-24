@@ -67,29 +67,30 @@ int GenCodeVisitor::visit(Program* program) {
 int GenCodeVisitor::visit(VarDec* stm) {
     int i = 0;
 
-    for (auto var : stm->var) {
+    auto var = stm->name;
 
-        // Global o local
-        if (!entornoFuncion) {
-            memoriaGlobal[var] = true;
-        } else {
-            if (!memoria.count(var)) {
-                memoria[var] = offset;
-                offset -= 8;
-            }
-        }
-
-        // Inicialización si viene con expresión
-        if (i < (int)stm->exps.size() && stm->exps[i] != nullptr) {
-            stm->exps[i]->accept(this);
-
-            if (!entornoFuncion)
-                out << " movq %rax, " << var << "(%rip)\n";
-            else
-                out << " movq %rax, " << memoria[var] << "(%rbp)\n";
-        }
-        ++i;
+    // Global o local
+    if (!entornoFuncion) {
+        globalMemory[var] = true;
     }
+    else {
+        if (!memory.count(var)) {
+            memory[var] = offset;
+            offset -= 8;
+        }
+    }
+
+    // Inicialización si viene con expresión
+    if (i < (int)stm->exps.size() && stm->exps[i] != nullptr) {
+        stm->exps[i]->accept(this);
+
+        if (!entornoFuncion)
+            out << " movq %rax, " << var << "(%rip)\n";
+        else
+            out << " movq %rax, " << memoria[var] << "(%rbp)\n";
+    }
+    ++i;
+
     return 0;
 }
 
