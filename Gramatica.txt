@@ -1,0 +1,44 @@
+FALTA TERMINARLA Y TIENE ERRORES, PERO ES PARA DARNOS UNA IDEA
+
+Program       ::= VarDecList FunDecList
+
+VarDecList    ::= ( VarDec )*
+
+FunDecList    ::= ( FunDec )+   ; debe haber al menos una en el programa final
+
+FunDec        ::= "fn" id "(" [ ParamDecList ] ")" "->" Type "{" Body "}"
+
+Body          ::= VarDecList StmtList
+
+ParamDecList  ::= Type id { "," Type Ident }
+
+VarDec        ::= "let" ["mut"] Type VarList ";"
+
+Type          ::= id
+
+VarList       ::= id { "," id }
+
+StmtList      ::= Stmt { ";" Stmt }
+
+Stmt          ::= id "=" CExp
+                | "println!" "(" CExp ")"
+                | "if" CExp "then" Body ["else" Body] "endif"
+                | "while" CExp "do" Body "endwhile"
+		| "for"   CExp [ "else" CExp ]
+                | "return" [ CExp ]
+
+CExp          ::= Exp [ ( ">" | ">=" | "<" | "<=" | "==" ) Exp ]
+
+Exp           ::= Term { ( "+" | "-" ) Term }
+
+Term          ::= Factor { ( "*" | "/" ) Factor }
+
+Factor        ::= id
+                | Number
+                | Bool
+                | "(" Exp ")"
+                | id "(" [ ArgList ] ")"
+
+ArgList       ::= CExp { "," CExp }
+
+Bool          ::= "true" | "false"
