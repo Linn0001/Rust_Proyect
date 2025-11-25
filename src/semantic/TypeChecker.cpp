@@ -108,6 +108,7 @@ void TypeChecker::visit(VarDec* v) {
         exit(0);
     }
     env.add_var(v->name, t);
+    v->resolved = t;
 }
 
 void TypeChecker::visit(FunDec* f) {

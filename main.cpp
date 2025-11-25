@@ -1,47 +1,17 @@
-// #include <iostream>
-// #include "src/lexic/scanner.h"
-// #include "src/syntactic/Parser.h"
-// #include "src/semantic/TypeCheck.h"
-// #include "src/semantic/CodeGen.h"
-//
-// int main(int argc, char** argv) {
-//     if (argc < 2) {
-//         std::cerr << "Uso: " << argv[0] << " archivo.rs\n";
-//         return 1;
-//     }
-//
-//     try {
-//         scanner scanner(argv[1]);
-//         Parser parser(&scanner);
-//         Program* ast = parser.parse();     // AST raíz
-//
-//         SymbolTable table;
-//         TypeCheck tc(&table);
-//         ast->accept(&tc);                  // chequeo de tipos
-//
-//         CodeGen cg("out.s");               // genera ensamblador
-//         ast->accept(&cg);
-//
-//         delete ast;
-//     } catch (const std::exception& ex) {
-//         std::cerr << "Error: " << ex.what() << '\n';
-//         return 1;
-//     }
-//
-//     return 0;
-// }
-
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <filesystem>
 
 #include "src/lexic/scanner.h"
 #include "src/lexic/token.h"
 #include "src/syntactic/parser.h"
 #include "src/syntactic/ast.h"
 #include "src/semantic/TypeChecker.h"
+#include "src/semantic/visitor.h"
 
 using namespace std;
+namespace fs = std::filesystem;
 
 // Función del scanner definida en scanner.cpp
 extern int ejecutar_scanner(Scanner* scanner, const string& InputFile);
@@ -56,6 +26,26 @@ string loadFile(const string& filename) {
     stringstream buffer;
     buffer << in.rdbuf();
     return buffer.str();
+}
+
+// Obtener nombre base del archivo sin extensión
+string getBaseName(const string& filepath) {
+    size_t lastSlash = filepath.find_last_of("/\\");
+    size_t lastDot = filepath.find_last_of(".");
+
+    string filename;
+    if (lastSlash != string::npos) {
+        filename = filepath.substr(lastSlash + 1);
+    } else {
+        filename = filepath;
+    }
+
+    if (lastDot != string::npos) {
+        size_t start = (lastSlash != string::npos) ? lastSlash + 1 : 0;
+        return filename.substr(0, lastDot - start);
+    }
+
+    return filename;
 }
 
 int main(int argc, char* argv[]) {
@@ -103,6 +93,38 @@ int main(int argc, char* argv[]) {
 
         cout << "\n>>> Typechecking exitoso\n";
 
+        // ----------------------------
+        // 4. Ejecutar CODEGEN
+        // ----------------------------
+        cout << "\n=== Ejecutando CODEGEN ===\n";
+
+        // Crear directorio output si no existe
+        string outputDir = "output";
+        if (!fs::exists(outputDir)) {
+            fs::create_directory(outputDir);
+        }
+
+        // Generar nombre del archivo assembly
+        string baseName = getBaseName(inputFile);
+        string asmFile = outputDir + "/" + baseName + ".s";
+
+        // Abrir archivo de salida
+        ofstream asmOut(asmFile);
+        if (!asmOut.is_open()) {
+            cerr << "Error: no se pudo crear el archivo " << asmFile << endl;
+            delete prog;
+            delete parser;
+            delete parserScanner;
+            return 1;
+        }
+
+        // Generar código assembly
+        GenCodeVisitor codegen(asmOut);
+        codegen.generar(prog);
+        asmOut.close();
+
+        cout << "\n>>> Generación de código exitosa\n";
+        cout << "    Assembly generado en: " << asmFile << "\n";
 
         delete prog;
         delete parser;

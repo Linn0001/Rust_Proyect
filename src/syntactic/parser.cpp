@@ -145,6 +145,7 @@ FunDec *Parser::parseFunDec() {
 Body* Parser::parseBody() {
     Body* b = new Body();
 
+    // Parsear declaraciones de variables
     if (check(Token::LET)) {
         b->decs.push_back(parseVarDec());
 
@@ -155,11 +156,15 @@ Body* Parser::parseBody() {
         }
     }
 
-    b->stmlist.push_back(parseStm());
+    // Parsear statements (ahora es OPCIONAL, no obligatorio)
+    // Solo intenta parsear un statement si NO estamos al final del bloque
+    if (!check(Token::RBRACE) && !isAtEnd()) {
+        b->stmlist.push_back(parseStm());
 
-    while (match(Token::SEMICOL)) {
-        if (!check(Token::RBRACE)) {
-            b->stmlist.push_back(parseStm());
+        while (match(Token::SEMICOL)) {
+            if (!check(Token::RBRACE)) {
+                b->stmlist.push_back(parseStm());
+            }
         }
     }
 
@@ -370,9 +375,12 @@ Stm* Parser::parseStm() {
                 FCallExp* fcall = new FCallExp();
 
                 fcall->name = nom;
-                fcall->args.push_back(parseCE());
-                while(match(Token::COMMA)) {
+
+                if (!check(Token::RPAREN)) {
                     fcall->args.push_back(parseCE());
+                    while(match(Token::COMMA)) {
+                        fcall->args.push_back(parseCE());
+                    }
                 }
                 match(Token::RPAREN);
                 return fcall;
