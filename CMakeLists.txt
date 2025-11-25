@@ -20,4 +20,8 @@ add_executable(Rust_Project
         src/syntactic/ast.h
         src/semantic/visitor.cpp
         src/semantic/visitor.h
+        src/semantic/TypeChecker.cpp
+        src/semantic/TypeChecker.h
+        src/semantic/environment.h
+        src/semantic/semantic_types.h
 )

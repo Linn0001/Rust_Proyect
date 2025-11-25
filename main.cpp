@@ -39,6 +39,7 @@
 #include "src/lexic/token.h"
 #include "src/syntactic/parser.h"
 #include "src/syntactic/ast.h"
+#include "src/semantic/TypeChecker.h"
 
 using namespace std;
 
@@ -91,6 +92,17 @@ int main(int argc, char* argv[]) {
         Program* prog = parser->parseProgram();
 
         cout << "\n>>> Parser exitoso\n";
+
+        // ----------------------------
+        // 3. Ejecutar TYPECHECKER
+        // ----------------------------
+        cout << "\n=== Ejecutando TYPECHECKER ===\n";
+
+        TypeChecker tc;
+        tc.typecheck(prog);
+
+        cout << "\n>>> Typechecking exitoso\n";
+
 
         delete prog;
         delete parser;

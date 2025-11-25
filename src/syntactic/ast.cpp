@@ -66,14 +66,18 @@ AssignStm::~AssignStm() {}
 IfStm::IfStm(Exp* c, Body* t, Body* e)
     : cond(c), then(t), els(e) {}
 
+IfStm::~IfStm() {}
+
 //                     WhileStm
 WhileStm::WhileStm(Exp* c, Body* t)
     : cond(c), b(t) {}
 
-//                     ExpAsStm
-ExpAsStm::ExpAsStm(Exp *e) : e(e) {}
+WhileStm::~WhileStm() {}
 
-ExpAsStm::~ExpAsStm() {}
+//                     ExpAsStm
+// ExpAsStm::ExpAsStm(Exp *e) : e(e) {}
+//
+// ExpAsStm::~ExpAsStm() {}
 
 
 //                     VarDec

@@ -1,0 +1,331 @@
+#include "typechecker.h"
+#include <iostream>
+#include <stdexcept>
+using namespace std;
+
+
+Type* NumberExp::accept(TypeVisitor* v) { return v->visit(this); }
+Type* BoolExp::accept(TypeVisitor* v) { return v->visit(this); }
+Type* IdExp::accept(TypeVisitor* v) { return v->visit(this); }
+Type* BinaryExp::accept(TypeVisitor* v) { return v->visit(this); }
+Type* FCallExp::accept(TypeVisitor* v) { return v->visit(this); }
+
+void IfStm::accept(TypeVisitor* v) { v->visit(this); }
+void WhileStm::accept(TypeVisitor* v) { v->visit(this); }
+void AssignStm::accept(TypeVisitor* v) { v->visit(this); }
+void PrintStm::accept(TypeVisitor* v) { v->visit(this); }
+void ReturnStm::accept(TypeVisitor* v) { v->visit(this); }
+
+void VarDec::accept(TypeVisitor* v) { v->visit(this); }
+void FunDec::accept(TypeVisitor* v) { v->visit(this); }
+void Body::accept(TypeVisitor* v) { v->visit(this); }
+void Program::accept(TypeVisitor* v) { v->visit(this); }
+
+// ===========================================================
+//   Constructor del TypeChecker
+// ===========================================================
+
+TypeChecker::TypeChecker() {
+    t_bool = new Type(Type::BOOL);
+    t_i8 = new Type(Type::I8);
+    t_i16 = new Type(Type::I16);
+    t_i32 = new Type(Type::I32);
+    t_i64 = new Type(Type::I64);
+    t_f32 = new Type(Type::F32);
+    t_f64 = new Type(Type::F64);
+    t_unit = new Type(Type::UNIT);
+}
+
+// ===========================================================
+//   Registrar funciones globales
+// ===========================================================
+
+void TypeChecker::add_function(FunDec* fd) {
+    if (functions.find(fd->name) != functions.end()) {
+        cerr << "Error: función '" << fd->name << "' ya fue declarada." << endl;
+        exit(0);
+    }
+
+    Type* returnType = Type::from_string(fd->type);
+
+    if (!returnType) {
+        cerr << "Error: tipo de retorno no válido en función '"
+             << fd->name << "' (" << fd->type << ")." << endl;
+        exit(0);
+    }
+
+    functions[fd->name] = returnType;
+}
+
+// ===========================================================
+//   Método principal de verificación
+// ===========================================================
+
+void TypeChecker::typecheck(Program* program) {
+    if (program) program->accept(this);
+    cout << "Revisión exitosa" << endl;
+}
+
+// ===========================================================
+//   Nivel superior: Programa y Bloque
+// ===========================================================
+
+void TypeChecker::visit(Program* p) {
+    // Primero registrar funciones
+    for (auto f : p->fdlist)
+        add_function(f);
+
+    env.add_level();
+    for (auto v : p->vdlist)
+        v->accept(this);
+    for (auto f : p->fdlist)
+        f->accept(this);
+    env.remove_level();
+}
+
+void TypeChecker::visit(Body* b) {
+    env.add_level();
+    for (auto v : b->decs)
+        v->accept(this);
+    for (auto s : b->stmlist)
+        s->accept(this);
+    env.remove_level();
+}
+
+// ===========================================================
+//   Declaraciones
+// ===========================================================
+
+void TypeChecker::visit(VarDec* v) {
+    Type* t = new Type();
+    if (!t->set_basic_type(v->type)) {
+        cerr << "Error: tipo de variable no válido." << endl;
+        exit(0);
+    }
+
+    if (env.check(v->name)) {
+        cerr << "Error: variable '" << v->name << "' ya declarada." << endl;
+        exit(0);
+    }
+    env.add_var(v->name, t);
+}
+
+void TypeChecker::visit(FunDec* f) {
+    Type* oldReturn = currentFunctionReturnType;
+
+    Type* ret = new Type();
+    if (!ret->set_basic_type(f->type)) {
+        cerr << "Error: tipo de retorno inválido en función '" << f->name << "'." << endl;
+        exit(0);
+    }
+
+    currentFunctionReturnType = ret;
+
+    env.add_level();
+
+    for (size_t i = 0; i < f->pnames.size(); ++i) {
+        Type* pt = new Type();
+        if (!pt->set_basic_type(f->ptypes[i])) {
+            cerr << "Error: tipo de parámetro inválido en función '" << f->name << "'." << endl;
+            exit(0);
+        }
+        env.add_var(f->pnames[i], pt);
+    }
+
+    f->b->accept(this);
+
+    env.remove_level();
+
+    currentFunctionReturnType = oldReturn;
+}
+
+
+// ===========================================================
+//   Sentencias
+// ===========================================================
+
+void TypeChecker::visit(IfStm* stm) {
+    // Verificar que la condición sea bool
+    Type* condType = stm->cond->accept(this);
+
+    if (!condType->match(t_bool)) {
+        cerr << "Error: la condición del if debe ser bool." << endl;
+        exit(0);
+    }
+
+    // Verificar bloque 'then'
+    if (stm->then)
+        stm->then->accept(this);
+
+    // Verificar bloque else si existe
+    if (stm->els)
+        stm->els->accept(this);
+}
+
+
+void TypeChecker::visit(WhileStm* stm) {
+    // Verificar que la condición sea bool
+    Type* condType = stm->cond->accept(this);
+
+    if (!condType->match(t_bool)) {
+        cerr << "Error: la condición del while debe ser bool." << endl;
+        exit(0);
+    }
+
+    // Verificar el cuerpo del while
+    if (stm->b)
+        stm->b->accept(this);
+}
+
+
+void TypeChecker::visit(PrintStm* stm) {
+    Type* t = stm->e->accept(this);
+
+    // Tipos permitidos en println (Rust simplificado)
+    bool ok =
+        t->match(t_bool) ||
+        t->match(t_i8)  ||
+        t->match(t_i16) ||
+        t->match(t_i32) ||
+        t->match(t_i64) ||
+        t->match(t_f32) ||
+        t->match(t_f64);
+
+    if (!ok) {
+        cerr << "Error: tipo inválido en println! (solo bool, enteros o floats)" << endl;
+        exit(0);
+    }
+}
+
+void TypeChecker::visit(AssignStm* stm) {
+    if (!env.check(stm->id)) {
+        cerr << "Error: variable '" << stm->id << "' no declarada." << endl;
+        exit(0);
+    }
+
+    Type* varType = env.lookup(stm->id);
+    Type* expType = stm->e->accept(this);
+
+    if (!varType->match(expType)) {
+        cerr << "Error: tipos incompatibles en asignación a '" << stm->id << "'." << endl;
+        exit(0);
+    }
+}
+
+void TypeChecker::visit(ReturnStm* stm) {
+    // Si no hay expresión, el return es equivalente a retornar unit
+    Type* retType = (stm->e ? stm->e->accept(this) : t_unit);
+
+    // El tipo que la función actual debería devolver
+    Type* expected = currentFunctionReturnType;
+
+    if (!retType->match(expected)) {
+        cerr << "Error: tipo de retorno inválido. "
+             << "Se esperaba " << expected->str()
+             << " pero se obtuvo " << retType->str() << endl;
+        exit(0);
+    }
+}
+
+
+// ===========================================================
+//   Expresiones
+// ===========================================================
+
+Type* TypeChecker::visit(BinaryExp* e) {
+    Type* left  = e->left->accept(this);
+    Type* right = e->right->accept(this);
+
+    auto isInt = [&](Type* t) {
+        return t->match(t_i8)  ||
+               t->match(t_i16) ||
+               t->match(t_i32) ||
+               t->match(t_i64);
+    };
+
+    auto isFloat = [&](Type* t) {
+        return t->match(t_f32) ||
+               t->match(t_f64);
+    };
+
+    auto isNumeric = [&](Type* t) {
+        return isInt(t) || isFloat(t);
+    };
+
+    switch (e->op) {
+
+        // -------------------------
+        // Aritmética: +, -, *, /
+        // -------------------------
+        case PLUS_OP:
+        case MINUS_OP:
+        case MUL_OP:
+        case DIV_OP:
+            if (!isNumeric(left) || !isNumeric(right)) {
+                cerr << "Error: operación aritmética requiere operandos numéricos.\n";
+                exit(0);
+            }
+
+            // Resultado = tipo izquierdo (simplificación)
+            return left;
+
+        // -------------------------
+        // Comparadores: >, <, >=, <=
+        // -------------------------
+        case GT_OP:
+        case GE_OP:
+        case LT_OP:
+        case LE_OP:
+            if (!isNumeric(left) || !isNumeric(right)) {
+                cerr << "Error: comparación requiere operandos numéricos.\n";
+                exit(0);
+            }
+            if (!left->match(right)) {
+                cerr << "Error: comparación entre tipos distintos: "
+                     << left->str() << " y " << right->str() << "\n";
+                exit(0);
+            }
+            return t_bool;
+
+        // -------------------------
+        // Igualdad: ==
+        // -------------------------
+        case EQ_OP:
+            if (!left->match(right)) {
+                cerr << "Error: comparación de igualdad requiere operandos del mismo tipo.\n";
+                exit(0);
+            }
+            return t_bool;
+
+        default:
+            cerr << "Error: operador binario no soportado.\n";
+            exit(0);
+    }
+}
+
+
+Type* TypeChecker::visit(NumberExp* e) {
+    // Todos los literales numéricos son i32 por defecto
+    return t_i32;
+}
+
+Type* TypeChecker::visit(BoolExp* e) {
+    return t_bool;
+}
+
+Type* TypeChecker::visit(IdExp* e) {
+    if (!env.check(e->val)) {
+        cerr << "Error: variable '" << e->val << "' no declarada." << endl;
+        exit(0);
+    }
+    return env.lookup(e->val);
+}
+
+Type* TypeChecker::visit(FCallExp* e) {
+    auto it = functions.find(e->name);
+    if (it == functions.end()) {
+        cerr << "Error: llamada a función no declarada '" << e->name << "'." << endl;
+        exit(0);
+    }
+    return it->second;
+}

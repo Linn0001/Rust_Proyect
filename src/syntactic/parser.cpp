@@ -82,10 +82,10 @@ VarDec* Parser::parseVarDec() {
     match(Token::LET);
 
     if (match(Token::MUT)) {
-        vd->is_mutable = true;
+        vd->isMutable = true;
     }
     else {
-        vd->is_mutable = false;
+        vd->isMutable = false;
     }
 
     match(Token::ID);
@@ -95,6 +95,10 @@ VarDec* Parser::parseVarDec() {
 
     match(Token::ID);
     vd->type = previous->text;
+
+    if (match(Token::ASSIGN)) {
+        vd->e = parseCE();
+    }
 
     return vd;
 }

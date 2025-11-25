@@ -5,12 +5,14 @@
 #include <list>
 #include <ostream>
 #include <vector>
+#include "semantic_types.h"
 using namespace std;
 
 
 // Forward declarations
-class Visitor;
+// class Visitor;
 class VarDec;
+class TypeVisitor;
 
 
 // Operadores binarios soportados
@@ -34,6 +36,7 @@ public:
     virtual ~Exp() = 0;
 
     static string binopToChar(BinaryOp op);
+    virtual Type* accept(TypeVisitor* visitor) = 0;
 };
 
 
@@ -45,7 +48,8 @@ public:
     BinaryOp op;
 
     BinaryExp(Exp* l, Exp* r, BinaryOp op);
-    int accept(Visitor* visitor);
+    // int accept(Visitor* visitor);
+    Type* accept(TypeVisitor* visitor);
     ~BinaryExp();
 };
 
@@ -54,7 +58,8 @@ public:
     int val;
 
     NumberExp(int v);
-    int accept(Visitor* visitor);
+    // int accept(Visitor* visitor);
+    Type* accept(TypeVisitor* visitor);
     ~NumberExp();
 };
 
@@ -63,7 +68,8 @@ public:
     bool val;
 
     BoolExp(bool v);
-    int accept(Visitor* visitor);
+    // int accept(Visitor* visitor);
+    Type* accept(TypeVisitor* visitor);
     ~BoolExp();
 };
 
@@ -72,7 +78,8 @@ public:
     string val;
 
     IdExp(string v);
-    int accept(Visitor* visitor);
+    // int accept(Visitor* visitor);
+    Type* accept(TypeVisitor* visitor);
     ~IdExp();
 };
 
@@ -82,7 +89,8 @@ public:
     vector<Exp*> args;
 
     FCallExp() {}
-    int accept(Visitor* visitor);
+    // int accept(Visitor* visitor);
+    Type* accept(TypeVisitor* visitor);
     ~FCallExp() {}
 };
 
@@ -90,8 +98,9 @@ public:
 // Clase base: Stm (statements)
 class Stm {
 public:
-    virtual int accept(Visitor* visitor) = 0;
+    // virtual int accept(Visitor* visitor) = 0;
     virtual ~Stm() = 0;
+    virtual void accept(TypeVisitor* visitor) = 0;
 };
 
 
@@ -99,11 +108,13 @@ public:
 class VarDec {
 public:
     string type;
-    bool is_mutable;
+    bool isMutable;
     string name;
+    Exp* e;
 
     VarDec();
-    int accept(Visitor* visitor);
+    // int accept(Visitor* visitor);
+    void accept(TypeVisitor* visitor);
     ~VarDec();
 };
 
@@ -115,7 +126,8 @@ public:
     list<VarDec*> decs;
 
     Body();
-    int accept(Visitor* visitor);
+    // int accept(Visitor* visitor);
+    void accept(TypeVisitor* visitor);
     ~Body();
 };
 
@@ -128,8 +140,9 @@ public:
     Body* els;
 
     IfStm(Exp* condition, Body* then, Body* els);
-    int accept(Visitor* visitor);
-    ~IfStm() {};
+    // int accept(Visitor* visitor);
+    void accept(TypeVisitor* visitor);
+    ~IfStm();
 };
 
 class WhileStm : public Stm {
@@ -138,8 +151,9 @@ public:
     Body* b;
 
     WhileStm(Exp* condition, Body* b);
-    int accept(Visitor* visitor);
-    ~WhileStm() {};
+    // int accept(Visitor* visitor);
+    void accept(TypeVisitor* visitor);
+    ~WhileStm();
 };
 
 class AssignStm : public Stm {
@@ -148,7 +162,8 @@ public:
     Exp* e;
 
     AssignStm(string, Exp*);
-    int accept(Visitor* visitor);
+    // int accept(Visitor* visitor);
+    void accept(TypeVisitor* visitor);
     ~AssignStm();
 };
 
@@ -157,7 +172,8 @@ public:
     Exp* e;
 
     PrintStm(Exp*);
-    int accept(Visitor* visitor);
+    // int accept(Visitor* visitor);
+    void accept(TypeVisitor* visitor);
     ~PrintStm();
 };
 
@@ -166,7 +182,8 @@ public:
     Exp* e;
 
     ReturnStm() {}
-    int accept(Visitor* visitor);
+    // int accept(Visitor* visitor);
+    void accept(TypeVisitor* visitor);
     ~ReturnStm() {}
 };
 
@@ -190,7 +207,8 @@ public:
     vector<string> pnames;
 
     FunDec() {}
-    int accept(Visitor* visitor);
+    // int accept(Visitor* visitor);
+    void accept(TypeVisitor* visitor);
     ~FunDec() {}
 };
 
@@ -202,7 +220,8 @@ public:
     list<FunDec*> fdlist;
 
     Program() {}
-    int accept(Visitor* visitor);
+    // int accept(Visitor* visitor);
+    void accept(TypeVisitor* visitor);
     ~Program() {}
 };
 
