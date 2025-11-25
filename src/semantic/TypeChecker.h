@@ -14,6 +14,7 @@ using namespace std;
 // ----------------------------------------------
 class BinaryExp;
 class NumberExp;
+class FloatExp;
 class BoolExp;
 class Program;
 class IfStm;
@@ -48,6 +49,7 @@ public:
     // Expresiones
     virtual Type* visit(BinaryExp* e) = 0;
     virtual Type* visit(NumberExp* e) = 0;
+    virtual Type* visit(FloatExp* e) = 0;
     virtual Type* visit(BoolExp* e) = 0;
     virtual Type* visit(IdExp* e) = 0;
     virtual Type* visit(FCallExp* e) = 0;
@@ -100,6 +102,7 @@ public:
     // --- Expresiones ---
     Type* visit(BinaryExp* e) override;
     Type* visit(NumberExp* e) override;
+    Type* visit(FloatExp* e) override;
     Type* visit(BoolExp *e) override;
     Type* visit(IdExp* e) override;
     Type* visit(FCallExp* e) override;

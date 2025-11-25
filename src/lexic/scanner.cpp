@@ -34,10 +34,40 @@ Token* Scanner::nextToken() {
     // ======================
     if (isdigit(c)) {
         current++;
+        bool isFloat = false;
+
+        // Parte entera
         while (current < input.length() && isdigit(input[current]))
             current++;
 
-        return new Token(Token::NUM, input, first, current - first);
+        // Verificar si hay punto decimal
+        if (current < input.length() && input[current] == '.') {
+            // Asegurarse de que hay un dígito después del punto
+            if (current + 1 < input.length() && isdigit(input[current + 1])) {
+                isFloat = true;
+                current++; // consumir el punto
+
+                // Parte decimal
+                while (current < input.length() && isdigit(input[current]))
+                    current++;
+            }
+        }
+
+        if (current < input.length() && (input[current] == 'e' || input[current] == 'E')) {
+            isFloat = true;
+            current++;
+
+            if (current < input.length() && (input[current] == '+' || input[current] == '-'))
+                current++;
+
+            while (current < input.length() && isdigit(input[current]))
+                current++;
+        }
+
+        if (isFloat)
+            return new Token(Token::FLOAT, input, first, current - first);
+        else
+            return new Token(Token::NUM, input, first, current - first);
     }
 
     // STRINGS

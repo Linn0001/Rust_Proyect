@@ -354,6 +354,9 @@ Stm* Parser::parseStm() {
         if (match(Token::NUM)) {
             return new NumberExp(stoi(previous->text));
         }
+        else if (match(Token::FLOAT)) {
+            return new FloatExp(stod(previous->text));
+        }
         else if (match(Token::TRUE)) {
             return new BoolExp(true);
         }

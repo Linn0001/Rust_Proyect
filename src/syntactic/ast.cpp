@@ -34,6 +34,11 @@ NumberExp::NumberExp(int v) : val(v) {}
 
 NumberExp::~NumberExp() {}
 
+//                     FloatExp
+FloatExp::FloatExp(double v) : val(v) {}
+
+FloatExp::~FloatExp() {}
+
 //                     BoolExp
 BoolExp::BoolExp(bool v) : val(v) {}
 

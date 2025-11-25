@@ -34,6 +34,7 @@ public:
         // Identificadores y literales
         ID,
         NUM,
+        FLOAT,
         STRING,
 
         // Operadores

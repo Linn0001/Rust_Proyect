@@ -11,6 +11,7 @@ using namespace std;
 
 class BinaryExp;
 class NumberExp;
+class FloatExp;
 class BoolExp;
 class Program;
 class PrintStm;
@@ -27,6 +28,7 @@ class Visitor {
 public:
     virtual int visit(BinaryExp* exp) = 0;
     virtual int visit(NumberExp* exp) = 0;
+    virtual int visit(FloatExp* exp) = 0;
     virtual int visit(BoolExp* exp) = 0;
     virtual int visit(IdExp* exp) = 0;
     virtual int visit(Program* p) = 0;
@@ -47,6 +49,7 @@ class GenCodeVisitor : public Visitor {
     // Funciones auxiliares para cargar/guardar valores según tamaño
     void loadValue(const string& location, int size, Type::TType ttype);
     void storeValue(const string& location, int size, Type::TType ttype);
+    unordered_map<string, double> floatConstants;
 
 public:
     GenCodeVisitor(std::ostream& out) : out(out) {}
@@ -68,6 +71,7 @@ public:
 
     int visit(BinaryExp* exp) override;
     int visit(NumberExp* exp) override;
+    int visit(FloatExp* exp) override;
     int visit(BoolExp* exp) override;
     int visit(IdExp* exp) override;
     int visit(Program* p) override ;

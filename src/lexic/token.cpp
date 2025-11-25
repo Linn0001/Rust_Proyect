@@ -42,6 +42,7 @@ ostream& operator<<(ostream& outs, const Token& tok) {
         // Identificadores y literales
         case Token::ID:       outs << "TOKEN(ID, \"" << tok.text << "\")"; break;
         case Token::NUM:   outs << "TOKEN(NUMBER, \"" << tok.text << "\")"; break;
+        case Token::FLOAT:    outs << "TOKEN(FLOAT, \"" << tok.text << "\")"; break;
         case Token::STRING:   outs << "TOKEN(STRING, \"" << tok.text << "\")"; break;
 
         // Operadores

@@ -5,6 +5,7 @@ using namespace std;
 
 
 Type* NumberExp::accept(TypeVisitor* v) { return v->visit(this); }
+Type* FloatExp::accept(TypeVisitor* v) { return v->visit(this); }
 Type* BoolExp::accept(TypeVisitor* v) { return v->visit(this); }
 Type* IdExp::accept(TypeVisitor* v) { return v->visit(this); }
 Type* BinaryExp::accept(TypeVisitor* v) { return v->visit(this); }
@@ -238,26 +239,20 @@ Type* TypeChecker::visit(BinaryExp* e) {
     Type* right = e->right->accept(this);
 
     auto isInt = [&](Type* t) {
-        return t->match(t_i8)  ||
-               t->match(t_i16) ||
-               t->match(t_i32) ||
-               t->match(t_i64);
+        return t->match(t_i8) || t->match(t_i16) || t->match(t_i32) || t->match(t_i64);
     };
 
     auto isFloat = [&](Type* t) {
-        return t->match(t_f32) ||
-               t->match(t_f64);
+        return t->match(t_f32) || t->match(t_f64);
     };
 
     auto isNumeric = [&](Type* t) {
         return isInt(t) || isFloat(t);
     };
 
-    switch (e->op) {
+    Type* resultType = nullptr;
 
-        // -------------------------
-        // Aritmética: +, -, *, /
-        // -------------------------
+    switch (e->op) {
         case PLUS_OP:
         case MINUS_OP:
         case MUL_OP:
@@ -266,13 +261,9 @@ Type* TypeChecker::visit(BinaryExp* e) {
                 cerr << "Error: operación aritmética requiere operandos numéricos.\n";
                 exit(0);
             }
+            resultType = left;  // Simplificación: usar tipo izquierdo
+            break;
 
-            // Resultado = tipo izquierdo (simplificación)
-            return left;
-
-        // -------------------------
-        // Comparadores: >, <, >=, <=
-        // -------------------------
         case GT_OP:
         case GE_OP:
         case LT_OP:
@@ -286,31 +277,39 @@ Type* TypeChecker::visit(BinaryExp* e) {
                      << left->str() << " y " << right->str() << "\n";
                 exit(0);
             }
-            return t_bool;
+            resultType = t_bool;
+            break;
 
-        // -------------------------
-        // Igualdad: ==
-        // -------------------------
         case EQ_OP:
             if (!left->match(right)) {
                 cerr << "Error: comparación de igualdad requiere operandos del mismo tipo.\n";
                 exit(0);
             }
-            return t_bool;
+            resultType = t_bool;
+            break;
 
         default:
             cerr << "Error: operador binario no soportado.\n";
             exit(0);
     }
+
+    e->type = resultType;
+    return resultType;
 }
 
 
 Type* TypeChecker::visit(NumberExp* e) {
-    // Todos los literales numéricos son i32 por defecto
+    e->type = t_i32;
     return t_i32;
 }
 
+Type* TypeChecker::visit(FloatExp* e) {
+    e->type = t_f64;
+    return t_f64;
+}
+
 Type* TypeChecker::visit(BoolExp* e) {
+    e->type = t_bool;
     return t_bool;
 }
 
@@ -319,7 +318,10 @@ Type* TypeChecker::visit(IdExp* e) {
         cerr << "Error: variable '" << e->val << "' no declarada." << endl;
         exit(0);
     }
+    Type* t = env.lookup(e->val);
+    e->type = t;
     return env.lookup(e->val);
+    return t;
 }
 
 Type* TypeChecker::visit(FCallExp* e) {
@@ -328,5 +330,6 @@ Type* TypeChecker::visit(FCallExp* e) {
         cerr << "Error: llamada a función no declarada '" << e->name << "'." << endl;
         exit(0);
     }
+    e->type = it->second;
     return it->second;
 }

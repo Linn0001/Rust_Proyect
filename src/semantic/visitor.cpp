@@ -11,6 +11,7 @@ using namespace std;
 
 int BinaryExp::accept(Visitor* visitor)     { return visitor->visit(this); }
 int NumberExp::accept(Visitor* visitor)     { return visitor->visit(this); }
+int FloatExp::accept(Visitor* visitor)     { return visitor->visit(this); }
 int BoolExp::accept(Visitor* visitor)       { return visitor->visit(this); }
 int IdExp::accept(Visitor* visitor)         { return visitor->visit(this); }
 int PrintStm::accept(Visitor* visitor)      { return visitor->visit(this); }
@@ -132,6 +133,14 @@ int GenCodeVisitor::visit(NumberExp* exp) {
     return 0;
 }
 
+int GenCodeVisitor::visit(FloatExp* exp) {
+    // Cargar valor flotante a registro XMM
+    // Necesitamos ponerlo en memoria primero
+    out << " movq $" << *(long long*)&exp->val << ", %rax\n";
+    out << " movq %rax, %xmm0\n";
+    return 0;
+}
+
 int GenCodeVisitor::visit(BoolExp* exp) {
     out << " movq $" << (exp->val ? 1 : 0) << ", %rax\n";
     return 0;
@@ -155,69 +164,6 @@ int GenCodeVisitor::visit(IdExp* exp) {
     else {
         cerr << "Error: variable no encontrada: " << exp->val << endl;
         exit(1);
-    }
-
-    return 0;
-}
-
-int GenCodeVisitor::visit(BinaryExp* exp) {
-    exp->left->accept(this);
-    out << " pushq %rax\n";
-
-    exp->right->accept(this);
-    out << " movq %rax, %rcx\n";
-    out << " popq %rax\n";
-
-    switch (exp->op) {
-        case PLUS_OP:
-            out << " addq %rcx, %rax\n";
-            break;
-        case MINUS_OP:
-            out << " subq %rcx, %rax\n";
-            break;
-        case MUL_OP:
-            out << " imulq %rcx, %rax\n";
-            break;
-        case DIV_OP:
-            // Para división con signo
-            out << " cqto\n";  // Extender %rax a %rdx:%rax
-            out << " idivq %rcx\n";
-            break;
-
-        case GT_OP:
-            out << " cmpq %rcx, %rax\n";
-            out << " movl $0, %eax\n";
-            out << " setg %al\n";
-            out << " movzbq %al, %rax\n";
-            break;
-
-        case GE_OP:
-            out << " cmpq %rcx, %rax\n";
-            out << " movl $0, %eax\n";
-            out << " setge %al\n";
-            out << " movzbq %al, %rax\n";
-            break;
-
-        case LT_OP:
-            out << " cmpq %rcx, %rax\n";
-            out << " movl $0, %eax\n";
-            out << " setl %al\n";
-            out << " movzbq %al, %rax\n";
-            break;
-
-        case LE_OP:
-            out << " cmpq %rcx, %rax\n";
-            out << " movl $0, %eax\n";
-            out << " setle %al\n";
-            out << " movzbq %al, %rax\n";
-            break;
-
-        case EQ_OP:
-            out << " cmpq %rcx, %rax\n";
-            out << " movl $0, %eax\n";
-            out << " sete %al\n";
-            out << " movzbq %al, %rax\n";
-            break;
     }
 
     return 0;
@@ -252,17 +198,192 @@ int GenCodeVisitor::visit(AssignStm* stm) {
     return 0;
 }
 
+int GenCodeVisitor::visit(BinaryExp* exp) {
+    // Verificar si es operación con flotantes
+    bool isFloat = (exp->left->type &&
+                    (exp->left->type->ttype == Type::F32 ||
+                     exp->left->type->ttype == Type::F64));
+
+    if (isFloat) {
+        // Código para flotantes
+        exp->left->accept(this);
+        out << " movq %rax, %xmm0\n";
+        out << " pushq %rax\n";
+
+        exp->right->accept(this);
+        out << " movq %rax, %xmm1\n";
+        out << " popq %rax\n";
+
+        switch (exp->op) {
+            // -------------------------
+            // Aritmética con flotantes
+            // -------------------------
+            case PLUS_OP:
+                out << " addsd %xmm1, %xmm0\n";
+                out << " movq %xmm0, %rax\n";
+                break;
+
+            case MINUS_OP:
+                out << " subsd %xmm1, %xmm0\n";
+                out << " movq %xmm0, %rax\n";
+                break;
+
+            case MUL_OP:
+                out << " mulsd %xmm1, %xmm0\n";
+                out << " movq %xmm0, %rax\n";
+                break;
+
+            case DIV_OP:
+                out << " divsd %xmm1, %xmm0\n";
+                out << " movq %xmm0, %rax\n";
+                break;
+
+            // -------------------------
+            // Comparaciones con flotantes usando ucomisd
+            // -------------------------
+            // ucomisd compara dos doubles y setea flags:
+            // - ZF (Zero Flag): 1 si son iguales
+            // - PF (Parity Flag): 1 si alguno es NaN
+            // - CF (Carry Flag): 1 si %xmm0 < %xmm1
+
+            case GT_OP:  // %xmm0 > %xmm1
+                out << " ucomisd %xmm1, %xmm0\n";
+                out << " seta %al\n";           // Set if above (CF=0 and ZF=0)
+                out << " movzbq %al, %rax\n";   // Zero-extend al a rax
+                break;
+
+            case GE_OP:  // %xmm0 >= %xmm1
+                out << " ucomisd %xmm1, %xmm0\n";
+                out << " setae %al\n";          // Set if above or equal (CF=0)
+                out << " movzbq %al, %rax\n";
+                break;
+
+            case LT_OP:  // %xmm0 < %xmm1
+                // Para A < B, comparamos B con A y usamos seta (above)
+                out << " ucomisd %xmm0, %xmm1\n";  // Compara %xmm1 con %xmm0
+                out << " seta %al\n";              // Set if %xmm1 > %xmm0 (es decir, %xmm0 < %xmm1)
+                out << " movzbq %al, %rax\n";
+                break;
+
+            case LE_OP:  // %xmm0 <= %xmm1
+                // Para A <= B, comparamos B con A y usamos setae (above or equal)
+                out << " ucomisd %xmm0, %xmm1\n";  // Compara %xmm1 con %xmm0
+                out << " setae %al\n";             // Set if %xmm1 >= %xmm0 (es decir, %xmm0 <= %xmm1)
+                out << " movzbq %al, %rax\n";
+                break;
+
+            case EQ_OP:  // %xmm0 == %xmm1
+                out << " ucomisd %xmm1, %xmm0\n";
+                out << " sete %al\n";           // Set if equal (ZF=1)
+                out << " setnp %cl\n";          // Set if not parity (not NaN)
+                out << " andb %cl, %al\n";      // AND ambos (igual Y no-NaN)
+                out << " movzbq %al, %rax\n";
+                break;
+
+            default:
+                cerr << "Error: operador no soportado para flotantes.\n";
+                exit(1);
+        }
+    } else {
+        // Código para enteros (el que ya tienes)
+        exp->left->accept(this);
+        out << " pushq %rax\n";
+        exp->right->accept(this);
+        out << " movq %rax, %rcx\n";
+        out << " popq %rax\n";
+
+        switch (exp->op) {
+            case PLUS_OP:
+                out << " addq %rcx, %rax\n";
+                break;
+            case MINUS_OP:
+                out << " subq %rcx, %rax\n";
+                break;
+            case MUL_OP:
+                out << " imulq %rcx, %rax\n";
+                break;
+            case DIV_OP:
+                out << " cqto\n";
+                out << " idivq %rcx\n";
+                break;
+
+            case GT_OP:
+                out << " cmpq %rcx, %rax\n";
+                out << " movl $0, %eax\n";
+                out << " setg %al\n";
+                out << " movzbq %al, %rax\n";
+                break;
+
+            case GE_OP:
+                out << " cmpq %rcx, %rax\n";
+                out << " movl $0, %eax\n";
+                out << " setge %al\n";
+                out << " movzbq %al, %rax\n";
+                break;
+
+            case LT_OP:
+                out << " cmpq %rcx, %rax\n";
+                out << " movl $0, %eax\n";
+                out << " setl %al\n";
+                out << " movzbq %al, %rax\n";
+                break;
+
+            case LE_OP:
+                out << " cmpq %rcx, %rax\n";
+                out << " movl $0, %eax\n";
+                out << " setle %al\n";
+                out << " movzbq %al, %rax\n";
+                break;
+
+            case EQ_OP:
+                out << " cmpq %rcx, %rax\n";
+                out << " movl $0, %eax\n";
+                out << " sete %al\n";
+                out << " movzbq %al, %rax\n";
+                break;
+        }
+    }
+
+    return 0;
+}
+
 int GenCodeVisitor::visit(PrintStm* stm) {
     stm->e->accept(this);
 
-    // TODO: Detectar el tipo de la expresión para elegir el formato correcto
-    // Por ahora asumimos enteros
-
-    // Alinear stack a 16 bytes antes de call (System V ABI)
-    out << " movq %rax, %rsi\n";                    // 2do argumento (valor)
-    out << " leaq print_fmt_int(%rip), %rdi\n";    // 1er argumento (formato)
-    out << " movl $0, %eax\n";                      // número de args vectoriales
-    out << " call printf\n";
+    // Detectar el tipo de la expresión
+    if (stm->e->type) {
+        if (stm->e->type->ttype == Type::F32 || stm->e->type->ttype == Type::F64) {
+            // Imprimir flotante
+            out << " movq %rax, %xmm0\n";
+            out << " leaq print_fmt_float(%rip), %rdi\n";
+            out << " movl $1, %eax\n";  // 1 registro XMM usado
+            out << " call printf\n";
+        } else if (stm->e->type->ttype == Type::BOOL) {
+            // Imprimir booleano
+            int label = labelcont++;
+            out << " cmpq $0, %rax\n";
+            out << " je .print_false_" << label << "\n";
+            out << " leaq print_fmt_bool_true(%rip), %rdi\n";
+            out << " jmp .print_bool_" << label << "\n";
+            out << ".print_false_" << label << ":\n";
+            out << " leaq print_fmt_bool_false(%rip), %rdi\n";
+            out << ".print_bool_" << label << ":\n";
+            out << " movl $0, %eax\n";
+            out << " call printf\n";
+        } else {
+            // Imprimir entero
+            out << " movq %rax, %rsi\n";
+            out << " leaq print_fmt_int(%rip), %rdi\n";
+            out << " movl $0, %eax\n";
+            out << " call printf\n";
+        }
+    } else {
+        // Fallback: asumir entero
+        out << " movq %rax, %rsi\n";
+        out << " leaq print_fmt_int(%rip), %rdi\n";
+        out << " movl $0, %eax\n";
+        out << " call printf\n";
+    }
 
     return 0;
 }

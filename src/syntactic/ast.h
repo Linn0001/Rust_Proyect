@@ -32,6 +32,8 @@ enum BinaryOp {
 // Clase base: Exp (expresiones)
 class Exp {
 public:
+    Type* type = nullptr;
+
     virtual int accept(Visitor* visitor) = 0;
     virtual ~Exp() = 0;
 
@@ -61,6 +63,16 @@ public:
     int accept(Visitor* visitor);
     Type* accept(TypeVisitor* visitor);
     ~NumberExp();
+};
+
+class FloatExp : public Exp {
+public:
+    double val;
+
+    FloatExp(double v);
+    int accept(Visitor* visitor);
+    Type* accept(TypeVisitor* visitor);
+    ~FloatExp();
 };
 
 class BoolExp : public Exp {
