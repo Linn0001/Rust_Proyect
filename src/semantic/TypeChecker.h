@@ -73,6 +73,10 @@ private:
     Type* t_i16;
     Type* t_i32;
     Type* t_i64;
+    Type* t_u8;
+    Type* t_u16;
+    Type* t_u32;
+    Type* t_u64;
     Type* t_f32;
     Type* t_f64;
     Type* t_unit;   // equivalente a ()

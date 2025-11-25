@@ -41,6 +41,7 @@ int GenCodeVisitor::generar(Program* program) {
 int GenCodeVisitor::visit(Program* program) {
     out << ".data\n";
     out << "print_fmt_int: .string \"%lld\\n\"\n";
+    out << "print_fmt_uint: .string \"%llu\\n\"\n";
     out << "print_fmt_float: .string \"%.6f\\n\"\n";
     out << "print_fmt_bool_true: .string \"true\\n\"\n";
     out << "print_fmt_bool_false: .string \"false\\n\"\n";
@@ -370,6 +371,13 @@ int GenCodeVisitor::visit(PrintStm* stm) {
             out << ".print_bool_" << label << ":\n";
             out << " movl $0, %eax\n";
             out << " call printf\n";
+        } else if (stm->e->type->ttype == Type::U8 || stm->e->type->ttype == Type::U16 ||
+               stm->e->type->ttype == Type::U32 || stm->e->type->ttype == Type::U64) {
+            // Imprimir entero sin signo
+            out << " movq %rax, %rsi\n";
+            out << " leaq print_fmt_uint(%rip), %rdi\n";
+            out << " movl $0, %eax\n";
+            out << " call printf\n";
         } else {
             // Imprimir entero
             out << " movq %rax, %rsi\n";
@@ -554,13 +562,19 @@ int GenCodeVisitor::visit(FCallExp* exp) {
 
 void GenCodeVisitor::loadValue(const string& location, int size, Type::TType ttype) {
     switch(size) {
-        case 1:  // i8, bool
-            out << " movzbq " << location << ", %rax\n";
-            break;
-        case 2:  // i16
-            out << " movzwq " << location << ", %rax\n";
-            break;
-        case 4:  // i32, f32
+        case 1:  // i8, u8, bool
+            if (ttype == Type::I8) {
+                out << " movsbq " << location << ", %rax\n"; // extensión con signo
+            } else {
+                out << " movzbq " << location << ", %rax\n"; // extensión cero para bool/u8
+            }
+        case 2:  // i16, u16
+            if (ttype == Type::I16) {
+                out << " movswq " << location << ", %rax\n";
+            } else {
+                out << " movzwq " << location << ", %rax\n";
+            }
+        case 4:  // i32, f32, u32
             // Para enteros con signo usar movslq
             if (ttype == Type::I32) {
                 out << " movslq " << location << ", %rax\n";
@@ -568,7 +582,7 @@ void GenCodeVisitor::loadValue(const string& location, int size, Type::TType tty
                 out << " movl " << location << ", %eax\n";
             }
             break;
-        case 8:  // i64, f64
+        case 8:  // i64, f64, u64
             out << " movq " << location << ", %rax\n";
             break;
         default:

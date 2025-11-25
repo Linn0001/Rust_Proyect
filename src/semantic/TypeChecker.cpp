@@ -1,4 +1,4 @@
-#include "typechecker.h"
+#include "Typechecker.h"
 #include <iostream>
 #include <stdexcept>
 using namespace std;
@@ -32,6 +32,10 @@ TypeChecker::TypeChecker() {
     t_i16 = new Type(Type::I16);
     t_i32 = new Type(Type::I32);
     t_i64 = new Type(Type::I64);
+    t_u8 = new Type(Type::U8);
+    t_u16 = new Type(Type::U16);
+    t_u32 = new Type(Type::U32);
+    t_u64 = new Type(Type::U64);
     t_f32 = new Type(Type::F32);
     t_f64 = new Type(Type::F64);
     t_unit = new Type(Type::UNIT);
@@ -190,6 +194,10 @@ void TypeChecker::visit(PrintStm* stm) {
         t->match(t_i16) ||
         t->match(t_i32) ||
         t->match(t_i64) ||
+        t ->match(t_u8) ||
+        t ->match(t_u16)||
+        t ->match(t_u32)||
+        t ->match(t_u64)||
         t->match(t_f32) ||
         t->match(t_f64);
 
@@ -239,7 +247,8 @@ Type* TypeChecker::visit(BinaryExp* e) {
     Type* right = e->right->accept(this);
 
     auto isInt = [&](Type* t) {
-        return t->match(t_i8) || t->match(t_i16) || t->match(t_i32) || t->match(t_i64);
+        return t->match(t_i8) || t->match(t_i16) || t->match(t_i32) || t->match(t_i64) ||
+               t->match(t_u8) || t->match(t_u16) || t->match(t_u32) || t->match(t_u64);
     };
 
     auto isFloat = [&](Type* t) {
