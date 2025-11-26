@@ -1,15 +1,14 @@
-fn test_floats() -> f32 {
-    let a: f32 = 3.14;
+fn test_floats() -> f64 {
     let b: f64 = 2.718281828;
     let c: f64 = 7.13;
 
-    println!("{}", a);
+    println!("{}", b);
     println!("{}", c);
 
-    return(a)
+    return(b)
 }
 
 fn main() {
-    let x: f32 = test_floats();
+    let x: f64 = test_floats();
     println!("{}", x);
 }
