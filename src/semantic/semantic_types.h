@@ -17,11 +17,12 @@ public:
         NOTYPE,   // Error o desconocido
         UNIT,     // () en Rust
         BOOL,     // bool
-        I8, I16, I32, I64,   // enteros
+        I8, I16, I32, I64,   // enteros con signo
+        U8, U16, U32, U64,   // enteros sin signo
         F32, F64             // flotantes
     };
 
-    static const char* type_names[9];
+    static const char* type_names[13];
 
     TType ttype;
 
@@ -39,6 +40,10 @@ public:
         { Type::I16,  {2, 2} },
         { Type::I32,  {4, 4} },
         { Type::I64,  {8, 8} },
+        { Type::U8,   {1, 1} },
+        { Type::U16,  {2, 2} },
+        { Type::U32,  {4, 4} },
+        { Type::U64,  {8, 8} },
         { Type::F32,  {4, 4} },
         { Type::F64,  {8, 8} },
         { Type::UNIT, {0, 1} }
@@ -67,6 +72,11 @@ public:
         if (s == "i32") return I32;
         if (s == "i64") return I64;
 
+        if (s == "u8")  return U8;
+        if (s == "u16") return U16;
+        if (s == "u32") return U32;
+        if (s == "u64") return U64;
+
         if (s == "f32") return F32;
         if (s == "f64") return F64;
 
@@ -79,6 +89,10 @@ public:
             case I16:  return "i16";
             case I32:  return "i32";
             case I64:  return "i64";
+            case U8:   return "u8";
+            case U16:  return "u16";
+            case U32:  return "u32";
+            case U64:  return "u64";
             case F32:  return "f32";
             case F64:  return "f64";
             case BOOL: return "bool";
@@ -108,7 +122,7 @@ public:
 };
 
 // Nombre legible (para debugging)
-inline const char* Type::type_names[9] = {
+inline const char* Type::type_names[13] = {
     "notype",
     "unit",
     "bool",
@@ -116,6 +130,10 @@ inline const char* Type::type_names[9] = {
     "i16",
     "i32",
     "i64",
+    "u8",
+    "u16",
+    "u32",
+    "u64",
     "f32",
     "f64"
 };
