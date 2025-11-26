@@ -17,6 +17,8 @@ void AssignStm::accept(TypeVisitor* v) { v->visit(this); }
 void PrintStm::accept(TypeVisitor* v) { v->visit(this); }
 void ReturnStm::accept(TypeVisitor* v) { v->visit(this); }
 
+void ForStm::accept(TypeVisitor* v) { v->visit(this); }
+
 void VarDec::accept(TypeVisitor* v) { v->visit(this); }
 void FunDec::accept(TypeVisitor* v) { v->visit(this); }
 void Body::accept(TypeVisitor* v) { v->visit(this); }
@@ -208,11 +210,22 @@ void TypeChecker::visit(AssignStm* stm) {
     Type* varType = env.lookup(stm->id);
     Type* expType = stm->e->accept(this);
 
-    if (!varType->match(expType)) {
-        cerr << "Error: tipos incompatibles en asignación a '" << stm->id << "'." << endl;
-        exit(0);
+    // 1) Si son exactamente iguales
+    if (varType->match(expType)) {
+        return;
     }
+
+    // 2) Permitir asignaciones entre i32 e i64 en ambas direcciones
+    if ((varType->ttype == Type::I64 && expType->ttype == Type::I32) ||
+        (varType->ttype == Type::I32 && expType->ttype == Type::I64)) {
+        return;
+    }
+
+    cerr << "Error: tipos incompatibles en asignación a '"
+         << stm->id << "'." << endl;
+    exit(0);
 }
+
 
 void TypeChecker::visit(ReturnStm* stm) {
     // Si no hay expresión, el return es equivalente a retornar unit
@@ -272,17 +285,22 @@ Type* TypeChecker::visit(BinaryExp* e) {
                 cerr << "Error: comparación requiere operandos numéricos.\n";
                 exit(0);
             }
-            if (!left->match(right)) {
-                cerr << "Error: comparación entre tipos distintos: "
+            // aunque sean de distinto tamaño (i32 vs i64, por ejemplo).
+            if (!(isInt(left) && isInt(right)) &&
+                !(isFloat(left) && isFloat(right))) {
+                cerr << "Error: comparación entre tipos incompatibles: "
                      << left->str() << " y " << right->str() << "\n";
                 exit(0);
             }
+
             resultType = t_bool;
             break;
 
         case EQ_OP:
-            if (!left->match(right)) {
-                cerr << "Error: comparación de igualdad requiere operandos del mismo tipo.\n";
+            // Igualdad: también permitimos ints entre sí o floats entre sí
+            if (!(isInt(left) && isInt(right)) &&
+                !(isFloat(left) && isFloat(right))) {
+                cerr << "Error: comparación de igualdad requiere tipos compatibles.\n";
                 exit(0);
             }
             resultType = t_bool;
@@ -332,4 +350,31 @@ Type* TypeChecker::visit(FCallExp* e) {
     }
     e->type = it->second;
     return it->second;
+}
+
+void TypeChecker::visit(ForStm* stm) {
+    // variable de iteración debe existir
+    if (!env.check(stm->id)) {
+        cerr << "Error: variable de iteración '" << stm->id
+             << "' no declarada." << endl;
+        exit(0);
+    }
+
+    Type* varType   = env.lookup(stm->id);
+    Type* startType = stm->start->accept(this);
+    Type* endType   = stm->end->accept(this);
+
+    auto isInt = [&](Type* t) {
+        return t->match(t_i8) || t->match(t_i16) ||
+               t->match(t_i32) || t->match(t_i64);
+    };
+
+    if (!isInt(varType) || !isInt(startType) || !isInt(endType)) {
+        cerr << "Error: for requiere tipos enteros en iterador y rango." << endl;
+        exit(0);
+    }
+
+    // Cuerpo del for
+    if (stm->b)
+        stm->b->accept(this);
 }

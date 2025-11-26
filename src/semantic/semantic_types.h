@@ -65,7 +65,7 @@ public:
         if (s == "i8")  return I8;
         if (s == "i16") return I16;
         if (s == "i32") return I32;
-        if (s == "i64") return I64;
+        if (s == "i64" || s == "long") return I64;
 
         if (s == "f32") return F32;
         if (s == "f64") return F64;

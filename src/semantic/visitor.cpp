@@ -24,6 +24,7 @@ int FCallExp::accept(Visitor* visitor)      { return visitor->visit(this); }
 int FunDec::accept(Visitor* visitor)        { return visitor->visit(this); }
 int Program::accept(Visitor* visitor)       { return visitor->visit(this); }
 int ReturnStm::accept(Visitor* visitor)     { return visitor->visit(this); }
+int ForStm::accept(Visitor *visitor)        { return visitor->visit(this); }
 
 ///////////////////////////////////////////////////////////////////////////////////
 //                               GenCodeVisitor – Helpers
@@ -434,6 +435,80 @@ int GenCodeVisitor::visit(WhileStm* stm) {
 int GenCodeVisitor::visit(ReturnStm* stm) {
     stm->e->accept(this);
     out << " jmp .end_" << nombreFuncion << "\n";
+    return 0;
+}
+
+int GenCodeVisitor::visit(ForStm* stm) {
+    // for i in start..end { body }
+    // Requiere que la variable 'i' ya exista como global o local.
+
+    Type* t = nullptr;
+    int size = 8;
+    string var = stm->id;
+
+    bool isGlobal = false;
+    int offsetVar = 0;
+
+    if (globalMemory.count(var)) {
+        t = globalMemory[var].second;
+        size = Type::sizeof_type(t->ttype);
+        isGlobal = true;
+    } else if (localTypes.count(var)) {
+        t = localTypes[var];
+        size = Type::sizeof_type(t->ttype);
+        offsetVar = memory[var];
+    } else {
+        cerr << "Error: variable de iteración no declarada: " << var << endl;
+        exit(1);
+    }
+
+    // i = start;
+    stm->start->accept(this);  // deja inicio en %rax
+    if (isGlobal) {
+        storeValue(var + "(%rip)", size, t->ttype);
+    } else {
+        storeValue(to_string(offsetVar) + "(%rbp)", size, t->ttype);
+    }
+
+    int label = labelcont++;
+
+    out << "for_" << label << ":\n";
+
+    // Cargar i en %rcx
+    if (isGlobal) {
+        loadValue(var + "(%rip)", size, t->ttype); // -> %rax
+    } else {
+        loadValue(to_string(offsetVar) + "(%rbp)", size, t->ttype);
+    }
+    out << " movq %rax, %rcx\n";
+
+    // Evaluar end en %rax
+    stm->end->accept(this);   // %rax = end
+
+    // while (i < end)
+    out << " cmpq %rax, %rcx\n";
+    out << " jge endfor_" << label << "\n";
+
+    // Cuerpo del for
+    stm->b->accept(this);
+
+    // i = i + 1
+    if (isGlobal) {
+        loadValue(var + "(%rip)", size, t->ttype);
+    } else {
+        loadValue(to_string(offsetVar) + "(%rbp)", size, t->ttype);
+    }
+    out << " addq $1, %rax\n";
+
+    if (isGlobal) {
+        storeValue(var + "(%rip)", size, t->ttype);
+    } else {
+        storeValue(to_string(offsetVar) + "(%rbp)", size, t->ttype);
+    }
+
+    out << " jmp for_" << label << "\n";
+    out << "endfor_" << label << ":\n";
+
     return 0;
 }
 
