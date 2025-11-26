@@ -24,6 +24,7 @@ int FCallExp::accept(Visitor* visitor)      { return visitor->visit(this); }
 int FunDec::accept(Visitor* visitor)        { return visitor->visit(this); }
 int Program::accept(Visitor* visitor)       { return visitor->visit(this); }
 int ReturnStm::accept(Visitor* visitor)     { return visitor->visit(this); }
+int OperatorDef::accept(Visitor* visitor)   { return visitor->visit(this); }
 
 ///////////////////////////////////////////////////////////////////////////////////
 //                               GenCodeVisitor – Helpers
@@ -70,6 +71,8 @@ int GenCodeVisitor::visit(Program* program) {
 
     // Declaraciones de funciones
     for (auto dec : program->fdlist)
+        dec->accept(this);
+    for (auto dec : program->opList)
         dec->accept(this);
 
     out << ".section .note.GNU-stack,\"\",@progbits\n";
@@ -215,9 +218,10 @@ int GenCodeVisitor::visit(BinaryExp* exp) {
         return 0;
     }
     // Verificar si es operación con flotantes
-    bool isFloat = (exp->left->type &&
-                    (exp->left->type->ttype == Type::F32 ||
-                     exp->left->type->ttype == Type::F64));
+    Type::TType operandType = exp->left->type ? exp->left->type->ttype : Type::I64;
+    bool isFloat = (operandType == Type::F32 || operandType == Type::F64);
+    bool isUnsignedInt = (operandType == Type::U8 || operandType == Type::U16 ||
+                          operandType == Type::U32 || operandType == Type::U64);
 
     if (isFloat) {
         // Código para flotantes
@@ -315,38 +319,64 @@ int GenCodeVisitor::visit(BinaryExp* exp) {
                 out << " subq %rcx, %rax\n";
                 break;
             case MUL_OP:
-                out << " imulq %rcx, %rax\n";
+                if (isUnsignedInt) {
+                    out << " xorq %rdx, %rdx\n";
+                    out << " mulq %rcx\n";
+                } else {
+                    out << " imulq %rcx, %rax\n";
+                }
                 break;
             case DIV_OP:
-                out << " cqto\n";
-                out << " idivq %rcx\n";
+                if (isUnsignedInt) {
+                    out << " xorq %rdx, %rdx\n";
+                    out << " divq %rcx\n";
+                } else {
+                    out << " cqto\n";
+                    out << " idivq %rcx\n";
+                }
                 break;
 
             case GT_OP:
                 out << " cmpq %rcx, %rax\n";
                 out << " movl $0, %eax\n";
-                out << " setg %al\n";
+                if (isUnsignedInt) {
+                    out << " seta %al\n";
+                } else {
+                    out << " setg %al\n";
+                }
                 out << " movzbq %al, %rax\n";
                 break;
 
             case GE_OP:
                 out << " cmpq %rcx, %rax\n";
                 out << " movl $0, %eax\n";
-                out << " setge %al\n";
+                if (isUnsignedInt) {
+                    out << " setae %al\n";
+                } else {
+                    out << " setge %al\n";
+                }
                 out << " movzbq %al, %rax\n";
                 break;
 
             case LT_OP:
                 out << " cmpq %rcx, %rax\n";
                 out << " movl $0, %eax\n";
-                out << " setl %al\n";
+                if (isUnsignedInt) {
+                    out << " setb %al\n";
+                } else {
+                    out << " setl %al\n";
+                }
                 out << " movzbq %al, %rax\n";
                 break;
 
             case LE_OP:
                 out << " cmpq %rcx, %rax\n";
                 out << " movl $0, %eax\n";
-                out << " setle %al\n";
+                if (isUnsignedInt) {
+                    out << " setbe %al\n";
+                } else {
+                    out << " setle %al\n";
+                }
                 out << " movzbq %al, %rax\n";
                 break;
 
@@ -463,39 +493,39 @@ int GenCodeVisitor::visit(ReturnStm* stm) {
 //                           GenCodeVisitor – Funciones y Calls
 ///////////////////////////////////////////////////////////////////////////////////
 
-int GenCodeVisitor::visit(FunDec* f) {
+int GenCodeVisitor::emitFunction(const string& name, const vector<string>& pnames, const vector<string>& ptypes, Body* body) {
     entornoFuncion = true;
     memory.clear();
     localTypes.clear();
     offset = -8;
-    nombreFuncion = f->name;
+    nombreFuncion = name;
 
     // Registros de parámetros según System V ABI (Linux/Unix)
     vector<string> argRegs = {"%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"};
 
     // Setup
-    out << ".globl " << f->name << "\n";
-    out << f->name << ":\n";
+    out << ".globl " << name << "\n";
+    out << name << ":\n";
     out << " pushq %rbp\n";
     out << " movq %rsp, %rbp\n";
 
     // ===== ARGUMENTOS =====
     // Los argumentos se guardan primero con 8 bytes cada uno
-    for (int i = 0; i < (int)f->pnames.size(); ++i) {
-        Type* paramType = Type::from_string(f->ptypes[i]);
+    for (int i = 0; i < (int)pnames.size(); ++i) {
+        Type* paramType = Type::from_string(ptypes[i]);
         if (!paramType) {
-            cerr << "Error: tipo de parámetro inválido: " << f->ptypes[i] << endl;
+            cerr << "Error: tipo de parámetro inválido: " << ptypes[i] << endl;
             exit(1);
         }
 
-        memory[f->pnames[i]] = offset;
-        localTypes[f->pnames[i]] = paramType;
+        memory[pnames[i]] = offset;
+        localTypes[pnames[i]] = paramType;
         out << " movq " << argRegs[i] << ", " << offset << "(%rbp)\n";
         offset -= 8;
     }
 
     // ===== VARIABLES LOCALES CON TAMAÑO DINÁMICO =====
-    for (auto dec : f->b->decs) {
+    for (auto dec : body->decs) {
         // Asegurarse de que el tipo está resuelto
         if (!dec->resolved) {
             dec->resolved = Type::from_string(dec->type);
@@ -539,22 +569,30 @@ int GenCodeVisitor::visit(FunDec* f) {
     }
 
     // ===== INICIALIZAR VARIABLES LOCALES =====
-    for (auto dec : f->b->decs) {
+    for (auto dec : body->decs) {
         dec->accept(this);
     }
 
     // ===== EJECUTAR CUERPO DE LA FUNCIÓN =====
-    for (auto s : f->b->stmlist) {
+    for (auto s : body->stmlist) {
         s->accept(this);
     }
 
     // ===== EPÍLOGO =====
-    out << ".end_" << f->name << ":\n";
+    out << ".end_" << name << ":\n";
     out << " leave\n";
     out << " ret\n";
 
     entornoFuncion = false;
     return 0;
+}
+
+int GenCodeVisitor::visit(FunDec* f) {
+    return emitFunction(f->mangledName.empty() ? f->name : f->mangledName, f->pnames, f->ptypes, f->b);
+}
+
+int GenCodeVisitor::visit(OperatorDef* od) {
+    return emitFunction(od->mangledName, od->pnames, od->ptypes, od->b);
 }
 
 int GenCodeVisitor::visit(FCallExp* exp) {
@@ -582,12 +620,14 @@ void GenCodeVisitor::loadValue(const string& location, int size, Type::TType tty
             } else {
                 out << " movzbq " << location << ", %rax\n"; // extensión cero para bool/u8
             }
+            break;
         case 2:  // i16, u16
             if (ttype == Type::I16) {
                 out << " movswq " << location << ", %rax\n";
             } else {
                 out << " movzwq " << location << ", %rax\n";
             }
+            break;
         case 4:  // i32, f32, u32
             // Para enteros con signo usar movslq
             if (ttype == Type::I32) {

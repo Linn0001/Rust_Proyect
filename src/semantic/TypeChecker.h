@@ -27,6 +27,7 @@ class Body;
 class VarDec;
 class FCallExp;
 class IdExp;
+class OperatorDef;
 
 // ----------------------------------------------
 // VISITOR DE TIPOS (interfaz)
@@ -38,6 +39,7 @@ public:
     virtual void visit(Body* b) = 0;
     virtual void visit(VarDec* v) = 0;
     virtual void visit(FunDec* f) = 0;
+    virtual void visit(OperatorDef* f) = 0;
 
     // Sentencias
     virtual void visit(IfStm* stm) = 0;
@@ -63,11 +65,16 @@ class TypeChecker : public TypeVisitor {
 private:
 
     Environment<Type*> env;                  // Entorno de variables
-    unordered_map<string, Type*> functions;  // Tipo de retorno de cada función
-    unordered_map<string, vector<Type*>> functionArgs; // Tipos de argumentos
+    struct FunctionSignature {
+        string mangledName;
+        Type* returnType;
+        vector<Type*> args;
+    };
+    unordered_map<string, vector<FunctionSignature>> functions; // nombre -> firmas
     struct OperatorSignature {
         string functionName;
         Type* returnType;
+        vector<Type*> args;
     };
     unordered_map<string, OperatorSignature> operatorTable; // (<op>, <left>, <right>) -> firma
     Type* currentFunctionReturnType;
@@ -88,8 +95,12 @@ private:
 
     // Registro de función (nombre → tipo retorno)
     void add_function(FunDec* fd);
+    void add_operator(OperatorDef* op);
     string makeOperatorKey(BinaryOp op, Type* left, Type* right) const;
     string typeToString(Type* t) const;
+    string mangleOperatorName(BinaryOp op, const vector<Type*>& args) const;
+    FunctionSignature makeFunctionSignature(const string& name, Type* returnType, const vector<Type*>& args) const;
+    const FunctionSignature* findFunctionOverload(const string& name, const vector<Type*>& args) const;
 
 public:
     TypeChecker();
@@ -102,6 +113,7 @@ public:
     void visit(Body* b) override;
     void visit(VarDec* v) override;
     void visit(FunDec* f) override;
+    void visit(OperatorDef* f) override;
 
     // --- Sentencias ---
     void visit(IfStm* stm) override;

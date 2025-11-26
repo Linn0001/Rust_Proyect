@@ -22,6 +22,7 @@ void VarDec::accept(TypeVisitor* v) { v->visit(this); }
 void FunDec::accept(TypeVisitor* v) { v->visit(this); }
 void Body::accept(TypeVisitor* v) { v->visit(this); }
 void Program::accept(TypeVisitor* v) { v->visit(this); }
+void OperatorDef::accept(TypeVisitor* v) { v->visit(this); }
 
 // ===========================================================
 //   Constructor del TypeChecker
@@ -46,12 +47,28 @@ TypeChecker::TypeChecker() {
 //   Registrar funciones globales
 // ===========================================================
 
-void TypeChecker::add_function(FunDec* fd) {
-    if (functions.find(fd->name) != functions.end()) {
-        cerr << "Error: función '" << fd->name << "' ya fue declarada." << endl;
-        exit(0);
-    }
+TypeChecker::FunctionSignature TypeChecker::makeFunctionSignature(const string& name, Type* returnType, const vector<Type*>& args) const {
+    return {name, returnType, args};
+}
 
+const TypeChecker::FunctionSignature* TypeChecker::findFunctionOverload(const string& name, const vector<Type*>& args) const {
+    auto it = functions.find(name);
+    if (it == functions.end()) return nullptr;
+
+    for (const auto& sig : it->second) {
+        if (sig.args.size() != args.size()) continue;
+        bool match = true;
+        for (size_t i = 0; i < args.size(); ++i) {
+            if (!sig.args[i]->match(args[i])) {
+                match = false;
+                break;
+            }
+        }
+        if (match) return &sig;
+    }
+    return nullptr;
+}
+void TypeChecker::add_function(FunDec* fd) {
     Type* returnType = Type::from_string(fd->type);
 
     if (!returnType) {
@@ -70,28 +87,98 @@ void TypeChecker::add_function(FunDec* fd) {
         args.push_back(param);
     }
 
-    functions[fd->name] = returnType;
-    functionArgs[fd->name] = args;
+    auto sig = makeFunctionSignature(fd->name, returnType, args);
 
-    if (fd->isOperator) {
-        if (args.size() != 2) {
-            cerr << "Error: la sobrecarga de operador requiere dos parámetros." << endl;
-            exit(0);
+    auto& overloads = functions[fd->name];
+    for (const auto& existing : overloads) {
+        if (existing.args.size() == sig.args.size()) {
+            bool same = true;
+            for (size_t i = 0; i < sig.args.size(); ++i) {
+                if (!existing.args[i]->match(sig.args[i])) {
+                    same = false;
+                    break;
+                }
+            }
+            if (same) {
+                cerr << "Error: función '" << fd->name << "' ya fue declarada con la misma firma." << endl;
+                exit(0);
+            }
         }
-
-        string key = makeOperatorKey(fd->operatorKind, args[0], args[1]);
-        if (operatorTable.find(key) != operatorTable.end()) {
-            cerr << "Error: sobrecarga duplicada para operador '" << Exp::binopToChar(fd->operatorKind)
-                 << "' con tipos " << args[0]->str() << " y " << args[1]->str() << "." << endl;
-            exit(0);
-        }
-
-        operatorTable[key] = {fd->name, returnType};
     }
+
+    sig.mangledName = fd->name;
+    fd->mangledName = sig.mangledName;
+    overloads.push_back(sig);
+}
+
+string TypeChecker::mangleOperatorName(BinaryOp op, const vector<Type*>& args) const {
+    string name = "__op_" + Exp::binopToName(op);
+    for (auto* a : args) {
+        name += "_" + a->str();
+    }
+    return name;
+}
+
+void TypeChecker::add_operator(OperatorDef* od) {
+    Type* returnType = Type::from_string(od->type);
+    if (!returnType) {
+        cerr << "Error: tipo de retorno no válido en operador '" << Exp::binopToChar(od->operatorKind) << "'." << endl;
+        exit(0);
+    }
+
+    vector<Type*> args;
+    for (const auto& ptype : od->ptypes) {
+        Type* param = Type::from_string(ptype);
+        if (!param) {
+            cerr << "Error: tipo de parámetro no válido en operador '" << Exp::binopToChar(od->operatorKind) << "'." << endl;
+            exit(0);
+        }
+        args.push_back(param);
+    }
+
+    if (args.empty() || args.size() > 2) {
+        cerr << "Error: las sobrecargas de operador requieren uno o dos parámetros." << endl;
+        exit(0);
+    }
+
+    string mangled = mangleOperatorName(od->operatorKind, args);
+    od->mangledName = mangled;
+
+    auto sig = makeFunctionSignature(mangled, returnType, args);
+
+    auto& overloads = functions[mangled];
+    for (const auto& existing : overloads) {
+        if (existing.args.size() == sig.args.size()) {
+            bool same = true;
+            for (size_t i = 0; i < sig.args.size(); ++i) {
+                if (!existing.args[i]->match(sig.args[i])) {
+                    same = false;
+                    break;
+                }
+            }
+            if (same) {
+                cerr << "Error: sobrecarga duplicada para operador '" << Exp::binopToChar(od->operatorKind)
+                     << "' con tipos ya registrados." << endl;
+                exit(0);
+            }
+        }
+    }
+    overloads.push_back(sig);
+
+    Type* right = args.size() > 1 ? args[1] : nullptr;
+    string key = makeOperatorKey(od->operatorKind, args[0], right);
+    if (operatorTable.find(key) != operatorTable.end()) {
+        cerr << "Error: sobrecarga duplicada para operador '" << Exp::binopToChar(od->operatorKind)
+             << "' con la combinación de tipos dada." << endl;
+        exit(0);
+    }
+    operatorTable[key] = {mangled, returnType, args};
 }
 
 string TypeChecker::makeOperatorKey(BinaryOp op, Type* left, Type* right) const {
-    return Exp::binopToName(op) + ":" + to_string(left->ttype) + ":" + to_string(right->ttype);
+    string key = Exp::binopToName(op) + ":" + to_string(left->ttype) + ":";
+    key += (right ? to_string(right->ttype) : string("none"));
+    return key;
 }
 
 string TypeChecker::typeToString(Type* t) const {
@@ -115,12 +202,16 @@ void TypeChecker::visit(Program* p) {
     // Primero registrar funciones
     for (auto f : p->fdlist)
         add_function(f);
+    for (auto op : p->opList)
+        add_operator(op);
 
     env.add_level();
     for (auto v : p->vdlist)
         v->accept(this);
     for (auto f : p->fdlist)
         f->accept(this);
+    for (auto op : p->opList)
+        op->accept(this);
     env.remove_level();
 }
 
@@ -163,27 +254,65 @@ void TypeChecker::visit(VarDec* v) {
 void TypeChecker::visit(FunDec* f) {
     Type* oldReturn = currentFunctionReturnType;
 
-    Type* ret = new Type();
-    if (!ret->set_basic_type(f->type)) {
-        cerr << "Error: tipo de retorno inválido en función '" << f->name << "'." << endl;
+    vector<Type*> args;
+    for (const auto& t : f->ptypes) {
+        Type* resolved = Type::from_string(t);
+        if (!resolved) {
+            cerr << "Error: tipo de parámetro inválido en función '" << f->name << "'." << endl;
+            exit(0);
+        }
+        args.push_back(resolved);
+    }
+
+    const FunctionSignature* sig = findFunctionOverload(f->name, args);
+    if (!sig) {
+        cerr << "Error interno: firma de función no registrada para '" << f->name << "'." << endl;
         exit(0);
     }
 
-    currentFunctionReturnType = ret;
+    f->mangledName = sig->mangledName;
+    currentFunctionReturnType = sig->returnType;
 
     env.add_level();
 
     for (size_t i = 0; i < f->pnames.size(); ++i) {
-        Type* pt = new Type();
-        if (!pt->set_basic_type(f->ptypes[i])) {
-            cerr << "Error: tipo de parámetro inválido en función '" << f->name << "'." << endl;
-            exit(0);
-        }
-        env.add_var(f->pnames[i], pt);
+        env.add_var(f->pnames[i], args[i]);
     }
 
     f->b->accept(this);
 
+    env.remove_level();
+
+    currentFunctionReturnType = oldReturn;
+}
+
+void TypeChecker::visit(OperatorDef* f) {
+    Type* oldReturn = currentFunctionReturnType;
+
+    vector<Type*> args;
+    for (const auto& t : f->ptypes) {
+        Type* resolved = Type::from_string(t);
+        if (!resolved) {
+            cerr << "Error: tipo de parámetro inválido en operador '" << Exp::binopToChar(f->operatorKind) << "'." << endl;
+            exit(0);
+        }
+        args.push_back(resolved);
+    }
+
+    const FunctionSignature* sig = findFunctionOverload(f->mangledName, args);
+    if (!sig) {
+        cerr << "Error interno: firma no registrada para operador '" << Exp::binopToChar(f->operatorKind) << "'." << endl;
+        exit(0);
+    }
+
+    currentFunctionReturnType = sig->returnType;
+
+    env.add_level();
+    for (size_t i = 0; i < f->pnames.size(); ++i) {
+        env.add_var(f->pnames[i], args[i]);
+    }
+
+    f->b->accept(this);
     env.remove_level();
 
     currentFunctionReturnType = oldReturn;
@@ -299,6 +428,9 @@ Type* TypeChecker::visit(BinaryExp* e) {
         return overload->second.returnType;
     }
 
+    e->hasOverloadedOperator = false;
+    e->overloadTarget.clear();
+
     auto isInt = [&](Type* t) {
         return t->match(t_i8) || t->match(t_i16) || t->match(t_i32) || t->match(t_i64) ||
                t->match(t_u8) || t->match(t_u16) || t->match(t_u32) || t->match(t_u64);
@@ -322,6 +454,10 @@ Type* TypeChecker::visit(BinaryExp* e) {
             if (!isNumeric(left) || !isNumeric(right)) {
                 cerr << "Error: no existe sobrecarga para '" << Exp::binopToChar(e->op)
                      << "' con tipos " << typeToString(left) << " y " << typeToString(right) << ".\n";
+                exit(0);
+            }
+            if (!left->match(right)) {
+                cerr << "Error: las operaciones aritméticas requieren operandos del mismo tipo.\n";
                 exit(0);
             }
             resultType = left;  // Simplificación: usar tipo izquierdo
@@ -387,27 +523,16 @@ Type* TypeChecker::visit(IdExp* e) {
 }
 
 Type* TypeChecker::visit(FCallExp* e) {
-    auto it = functions.find(e->name);
-    if (it == functions.end()) {
-        cerr << "Error: llamada a función no declarada '" << e->name << "'." << endl;
+    vector<Type*> argTypes;
+    for (auto* arg : e->args) {
+        argTypes.push_back(arg->accept(this));
+    }
+    const FunctionSignature* sig = findFunctionOverload(e->name, argTypes);
+    if (!sig) {
+        cerr << "Error: no existe una función " << e->name << " con la firma solicitada." << endl;
         exit(0);
     }
-    auto argsIt = functionArgs.find(e->name);
-    if (argsIt != functionArgs.end()) {
-        if (argsIt->second.size() != e->args.size()) {
-            cerr << "Error: número incorrecto de argumentos en llamada a '" << e->name << "'." << endl;
-            exit(0);
-        }
-
-        for (size_t i = 0; i < e->args.size(); ++i) {
-            Type* argType = e->args[i]->accept(this);
-            if (!argType->match(argsIt->second[i])) {
-                cerr << "Error: tipo de argumento inválido en posición " << i
-                     << " al llamar a '" << e->name << "'" << endl;
-                exit(0);
-            }
-        }
-    }
-    e->type = it->second;
-    return it->second;
+    e->type = sig->returnType;
+    e->name = sig->mangledName;
+    return sig->returnType;
 }

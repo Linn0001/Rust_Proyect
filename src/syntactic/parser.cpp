@@ -50,6 +50,18 @@ bool Parser::isAtEnd() {
     return (current->type == Token::END);
 }
 
+void Parser::parseParameterList(vector<string>& names, vector<string>& types) {
+    if (!check(Token::ID)) return;
+
+    do {
+        match(Token::ID);
+        names.push_back(previous->text);
+        match(Token::COL);
+        match(Token::ID);
+        types.push_back(previous->text);
+    } while (match(Token::COMMA));
+}
+
 // =============================
 // Reglas gramaticales
 // =============================
@@ -65,12 +77,17 @@ Program* Parser::parseProgram() {
             }
         }
     }
-    if (check(Token::FN)) {
-        p->fdlist.push_back(parseFunDec());
-        while (check(Token::FN)) {
-                p->fdlist.push_back(parseFunDec());
-            }
+    while (!isAtEnd()) {
+        if (check(Token::FN)) {
+            p->fdlist.push_back(parseFunDec());
         }
+        else if (check(Token::OPERATOR)) {
+            p->opList.push_back(parseOperatorDecl());
+        }
+        else {
+            break;
+        }
+    }
     cout << "Parser exitoso" << endl;
 
     return p;
@@ -108,57 +125,13 @@ FunDec *Parser::parseFunDec() {
 
     match(Token::FN);
 
-    if (match(Token::OPERATOR)) {
-        fd->isOperator = true;
-
-    if (match(Token::PLUS)) {
-        fd->operatorKind = PLUS_OP;
-    }
-    else if (match(Token::MINUS)) {
-        fd->operatorKind = MINUS_OP;
-    }
-    else if (match(Token::MUL)) {
-        fd->operatorKind = MUL_OP;
-    }
-    else if (match(Token::DIV)) {
-        fd->operatorKind = DIV_OP;
-    }
-    else if (match(Token::GT)) {
-        fd->operatorKind = GT_OP;
-    }
-    else if (match(Token::GE)) {
-        fd->operatorKind = GE_OP;
-    }
-    else if (match(Token::LT)) {
-        fd->operatorKind = LT_OP;
-    }
-    else if (match(Token::LE)) {
-        fd->operatorKind = LE_OP;
-    }
-    else if (match(Token::EQ)) {
-        fd->operatorKind = EQ_OP;
-    }
-    else {
-        throw runtime_error("Error sintáctico: operador no válido en declaración");
-    }
-
-        fd->name = "__op_" + Exp::binopToName(fd->operatorKind);
-    } else {
-        match(Token::ID);
-        fd->name = previous->text;
-    }
+    match(Token::ID);
+    fd->name = previous->text;
+    fd->mangledName = fd->name;
 
     match(Token::LPAREN);
 
-    if (check(Token::ID)) {
-        while (match(Token::ID)) {
-            fd->pnames.push_back(previous->text);
-            match(Token::COL);
-            match(Token::ID);
-            fd->ptypes.push_back(previous->text);
-            match(Token::COMMA);
-        }
-    }
+    parseParameterList(fd->pnames, fd->ptypes);
     match(Token::RPAREN);
 
     if (match(Token::ARROW)) {
@@ -176,6 +149,43 @@ FunDec *Parser::parseFunDec() {
     match(Token::RBRACE);
 
     return fd;
+}
+
+OperatorDef* Parser::parseOperatorDecl() {
+    OperatorDef* od = new OperatorDef();
+
+    match(Token::OPERATOR);
+
+    if (match(Token::PLUS))      od->operatorKind = PLUS_OP;
+    else if (match(Token::MINUS)) od->operatorKind = MINUS_OP;
+    else if (match(Token::MUL))   od->operatorKind = MUL_OP;
+    else if (match(Token::DIV))   od->operatorKind = DIV_OP;
+    else if (match(Token::GT))    od->operatorKind = GT_OP;
+    else if (match(Token::GE))    od->operatorKind = GE_OP;
+    else if (match(Token::LT))    od->operatorKind = LT_OP;
+    else if (match(Token::LE))    od->operatorKind = LE_OP;
+    else if (match(Token::EQ))    od->operatorKind = EQ_OP;
+    else {
+        throw runtime_error("Error sintáctico: operador no válido en declaración");
+    }
+
+    match(Token::LPAREN);
+    parseParameterList(od->pnames, od->ptypes);
+    match(Token::RPAREN);
+
+    if (match(Token::ARROW)) {
+        match(Token::ID);
+        od->type = previous->text;
+    }
+    else {
+        od->type = "i32";
+    }
+
+    match(Token::LBRACE);
+    od->b = parseBody();
+    match(Token::RBRACE);
+
+    return od;
 }
 
 

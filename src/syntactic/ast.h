@@ -13,6 +13,7 @@ using namespace std;
 class Visitor;
 class VarDec;
 class TypeVisitor;
+class OperatorDef;
 
 
 // Operadores binarios soportados
@@ -232,8 +233,7 @@ public:
     Body* b;
     vector<string> ptypes;
     vector<string> pnames;
-    bool isOperator = false;
-    BinaryOp operatorKind = PLUS_OP;
+    string mangledName;
 
     FunDec() {}
     int accept(Visitor* visitor);
@@ -241,12 +241,27 @@ public:
     ~FunDec() {}
 };
 
+class OperatorDef {
+public:
+    BinaryOp operatorKind = PLUS_OP;
+    vector<string> ptypes;
+    vector<string> pnames;
+    string type;
+    Body* b;
+    string mangledName;
+
+    OperatorDef() {}
+    int accept(Visitor* visitor);
+    void accept(TypeVisitor* visitor);
+    ~OperatorDef() {}
+};
 
 // Programa principal
 class Program {
 public:
     list<VarDec*> vdlist;
     list<FunDec*> fdlist;
+    list<OperatorDef*> opList;
 
     Program() {}
     int accept(Visitor* visitor);

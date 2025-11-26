@@ -23,6 +23,7 @@ class VarDec;
 class FCallExp;
 class ReturnStm;
 class FunDec;
+class OperatorDef;
 
 class Visitor {
 public:
@@ -41,6 +42,7 @@ public:
     virtual int visit(FCallExp* fcall) = 0;
     virtual int visit(ReturnStm* r) = 0;
     virtual int visit(FunDec* fd) = 0;
+    virtual int visit(OperatorDef* od) = 0;
 };
 
 class GenCodeVisitor : public Visitor {
@@ -50,6 +52,7 @@ class GenCodeVisitor : public Visitor {
     void loadValue(const string& location, int size, Type::TType ttype);
     void storeValue(const string& location, int size, Type::TType ttype);
     unordered_map<string, double> floatConstants;
+    int emitFunction(const string& name, const vector<string>& pnames, const vector<string>& ptypes, Body* body);
 
 public:
     GenCodeVisitor(std::ostream& out) : out(out) {}
@@ -84,6 +87,7 @@ public:
     int visit(FCallExp* fcall) override;
     int visit(ReturnStm* r) override;
     int visit(FunDec* fd) override;
+    int visit(OperatorDef* od) override;
 };
 
 #endif //RUST_PROJECT_VISITOR_H
