@@ -1,4 +1,4 @@
-#include "typechecker.h"
+#include "TypeChecker.h"
 #include <iostream>
 #include <stdexcept>
 using namespace std;
@@ -32,9 +32,55 @@ TypeChecker::TypeChecker() {
     t_i16 = new Type(Type::I16);
     t_i32 = new Type(Type::I32);
     t_i64 = new Type(Type::I64);
+    t_u8 = new Type(Type::U8);
+    t_u16 = new Type(Type::U16);
+    t_u32 = new Type(Type::U32);
+    t_u64 = new Type(Type::U64);
     t_f32 = new Type(Type::F32);
     t_f64 = new Type(Type::F64);
     t_unit = new Type(Type::UNIT);
+}
+
+bool TypeChecker::isInt(Type* t) const {
+    if (!t) return false;
+    switch (t->ttype) {
+        case Type::I8:
+        case Type::I16:
+        case Type::I32:
+        case Type::I64:
+        case Type::U8:
+        case Type::U16:
+        case Type::U32:
+        case Type::U64:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool TypeChecker::isFloat(Type* t) const {
+    if (!t) return false;
+    return t->ttype == Type::F32 || t->ttype == Type::F64;
+}
+
+bool TypeChecker::isNumeric(Type* t) const {
+    return isInt(t) || isFloat(t);
+}
+
+bool TypeChecker::promoteLiteralTo(Exp* expr, Type* target) {
+    if (!target) return false;
+    if (auto num = dynamic_cast<NumberExp*>(expr)) {
+        if (isNumeric(target)) {
+            num->type = target;
+            return true;
+        }
+    } else if (auto fl = dynamic_cast<FloatExp*>(expr)) {
+        if (isFloat(target)) {
+            fl->type = target;
+            return true;
+        }
+    }
+    return false;
 }
 
 // ===========================================================
@@ -190,6 +236,10 @@ void TypeChecker::visit(PrintStm* stm) {
         t->match(t_i16) ||
         t->match(t_i32) ||
         t->match(t_i64) ||
+        t->match(t_u8)  ||
+        t->match(t_u16) ||
+        t->match(t_u32) ||
+        t->match(t_u64) ||
         t->match(t_f32) ||
         t->match(t_f64);
 
@@ -209,8 +259,14 @@ void TypeChecker::visit(AssignStm* stm) {
     Type* expType = stm->e->accept(this);
 
     if (!varType->match(expType)) {
-        cerr << "Error: tipos incompatibles en asignación a '" << stm->id << "'." << endl;
-        exit(0);
+        if (promoteLiteralTo(stm->e, varType)) {
+            expType = stm->e->type;
+        }
+
+        if (!varType->match(expType)) {
+            cerr << "Error: tipos incompatibles en asignación a '" << stm->id << "'." << endl;
+            exit(0);
+        }
     }
 }
 
@@ -238,18 +294,6 @@ Type* TypeChecker::visit(BinaryExp* e) {
     Type* left  = e->left->accept(this);
     Type* right = e->right->accept(this);
 
-    auto isInt = [&](Type* t) {
-        return t->match(t_i8) || t->match(t_i16) || t->match(t_i32) || t->match(t_i64);
-    };
-
-    auto isFloat = [&](Type* t) {
-        return t->match(t_f32) || t->match(t_f64);
-    };
-
-    auto isNumeric = [&](Type* t) {
-        return isInt(t) || isFloat(t);
-    };
-
     Type* resultType = nullptr;
 
     switch (e->op) {
@@ -260,6 +304,21 @@ Type* TypeChecker::visit(BinaryExp* e) {
             if (!isNumeric(left) || !isNumeric(right)) {
                 cerr << "Error: operación aritmética requiere operandos numéricos.\n";
                 exit(0);
+            }
+            if (!left->match(right)) {
+                bool adjusted = false;
+                if (promoteLiteralTo(e->left, right)) {
+                    left = e->left->type;
+                    adjusted = left->match(right);
+                }
+                if (!adjusted && promoteLiteralTo(e->right, left)) {
+                    right = e->right->type;
+                    adjusted = left->match(right);
+                }
+                if (!adjusted) {
+                    cerr << "Error: los operandos deben ser del mismo tipo en la operación aritmética.\n";
+                    exit(0);
+                }
             }
             resultType = left;  // Simplificación: usar tipo izquierdo
             break;
@@ -273,17 +332,39 @@ Type* TypeChecker::visit(BinaryExp* e) {
                 exit(0);
             }
             if (!left->match(right)) {
-                cerr << "Error: comparación entre tipos distintos: "
-                     << left->str() << " y " << right->str() << "\n";
-                exit(0);
+                bool adjusted = false;
+                if (promoteLiteralTo(e->left, right)) {
+                    left = e->left->type;
+                    adjusted = left->match(right);
+                }
+                if (!adjusted && promoteLiteralTo(e->right, left)) {
+                    right = e->right->type;
+                    adjusted = left->match(right);
+                }
+                if (!adjusted) {
+                    cerr << "Error: comparación entre tipos distintos: "
+                         << left->str() << " y " << right->str() << "\n";
+                    exit(0);
+                }
             }
             resultType = t_bool;
             break;
 
         case EQ_OP:
             if (!left->match(right)) {
-                cerr << "Error: comparación de igualdad requiere operandos del mismo tipo.\n";
-                exit(0);
+                bool adjusted = false;
+                if (promoteLiteralTo(e->left, right)) {
+                    left = e->left->type;
+                    adjusted = left->match(right);
+                }
+                if (!adjusted && promoteLiteralTo(e->right, left)) {
+                    right = e->right->type;
+                    adjusted = left->match(right);
+                }
+                if (!adjusted) {
+                    cerr << "Error: comparación de igualdad requiere operandos del mismo tipo.\n";
+                    exit(0);
+                }
             }
             resultType = t_bool;
             break;
