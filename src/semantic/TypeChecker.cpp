@@ -217,11 +217,28 @@ void TypeChecker::visit(AssignStm* stm) {
     Type* varType = env.lookup(stm->id);
     Type* expType = stm->e->accept(this);
 
-    if (!varType->match(expType)) {
+    auto isInt = [&](Type* t) {
+        return t->match(t_i8)  || t->match(t_i16) || t->match(t_i32) || t->match(t_i64) ||
+               t->match(t_u8)  || t->match(t_u16) || t->match(t_u32) || t->match(t_u64);
+    };
+
+    bool ok = varType->match(expType);
+
+    // 🔹 Caso especial: literal entero asignado a cualquier tipo entero (i*/u*)
+    if (!ok) {
+        if (stm->e->isNumberLiteral() && isInt(varType) && isInt(expType)) {
+            ok = true;
+            // Opcional: fijar el tipo concreto del literal al de la variable
+            stm->e->type = varType;
+        }
+    }
+
+    if (!ok) {
         cerr << "Error: tipos incompatibles en asignación a '" << stm->id << "'." << endl;
         exit(0);
     }
 }
+
 
 void TypeChecker::visit(ReturnStm* stm) {
     // Si no hay expresión, el return es equivalente a retornar unit

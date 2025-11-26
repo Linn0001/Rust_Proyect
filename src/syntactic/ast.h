@@ -39,6 +39,8 @@ public:
 
     static string binopToChar(BinaryOp op);
     virtual Type* accept(TypeVisitor* visitor) = 0;
+
+    virtual bool isNumberLiteral() const { return false; }
 };
 
 
@@ -63,6 +65,8 @@ public:
     int accept(Visitor* visitor);
     Type* accept(TypeVisitor* visitor);
     ~NumberExp();
+
+    bool isNumberLiteral() const override { return true; }
 };
 
 class FloatExp : public Exp {
