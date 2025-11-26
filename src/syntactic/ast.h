@@ -38,6 +38,7 @@ public:
     virtual ~Exp() = 0;
 
     static string binopToChar(BinaryOp op);
+    static string binopToName(BinaryOp op);
     virtual Type* accept(TypeVisitor* visitor) = 0;
 };
 
@@ -48,6 +49,8 @@ public:
     Exp* left;
     Exp* right;
     BinaryOp op;
+    bool hasOverloadedOperator = false;
+    string overloadTarget;
 
     BinaryExp(Exp* l, Exp* r, BinaryOp op);
     int accept(Visitor* visitor);
@@ -229,6 +232,8 @@ public:
     Body* b;
     vector<string> ptypes;
     vector<string> pnames;
+    bool isOperator = false;
+    BinaryOp operatorKind = PLUS_OP;
 
     FunDec() {}
     int accept(Visitor* visitor);

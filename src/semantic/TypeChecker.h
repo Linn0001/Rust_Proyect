@@ -65,6 +65,11 @@ private:
     Environment<Type*> env;                  // Entorno de variables
     unordered_map<string, Type*> functions;  // Tipo de retorno de cada función
     unordered_map<string, vector<Type*>> functionArgs; // Tipos de argumentos
+    struct OperatorSignature {
+        string functionName;
+        Type* returnType;
+    };
+    unordered_map<string, OperatorSignature> operatorTable; // (<op>, <left>, <right>) -> firma
     Type* currentFunctionReturnType;
 
     // Tipos básicos de Rust
@@ -83,6 +88,8 @@ private:
 
     // Registro de función (nombre → tipo retorno)
     void add_function(FunDec* fd);
+    string makeOperatorKey(BinaryOp op, Type* left, Type* right) const;
+    string typeToString(Type* t) const;
 
 public:
     TypeChecker();

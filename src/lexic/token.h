@@ -27,6 +27,7 @@ public:
         PRINTLN,
         TRUE,
         FALSE,
+        OPERATOR,
 
         // Tipos de lenguaje
         TYPE_ID,
@@ -50,6 +51,8 @@ public:
         LT,       // <
         LE,       // <=
         EQ,       // ==
+        AND,
+        OR,
 
         // Símbolos
         LPAREN,   // (

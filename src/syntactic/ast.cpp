@@ -20,6 +20,21 @@ string Exp::binopToChar(BinaryOp op) {
     }
 }
 
+string Exp::binopToName(BinaryOp op) {
+    switch (op) {
+        case PLUS_OP:  return "add";
+        case MINUS_OP: return "sub";
+        case MUL_OP:   return "mul";
+        case DIV_OP:   return "div";
+        case GT_OP:    return "gt";
+        case GE_OP:    return "ge";
+        case LT_OP:    return "lt";
+        case LE_OP:    return "le";
+        case EQ_OP:    return "eq";
+        default:       return "op";
+    }
+}
+
 //                     BinaryExp
 BinaryExp::BinaryExp(Exp* l, Exp* r, BinaryOp o)
     : left(l), right(r), op(o) {}

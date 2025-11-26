@@ -108,8 +108,45 @@ FunDec *Parser::parseFunDec() {
 
     match(Token::FN);
 
-    match(Token::ID);
-    fd->name = previous->text;
+    if (match(Token::OPERATOR)) {
+        fd->isOperator = true;
+
+    if (match(Token::PLUS)) {
+        fd->operatorKind = PLUS_OP;
+    }
+    else if (match(Token::MINUS)) {
+        fd->operatorKind = MINUS_OP;
+    }
+    else if (match(Token::MUL)) {
+        fd->operatorKind = MUL_OP;
+    }
+    else if (match(Token::DIV)) {
+        fd->operatorKind = DIV_OP;
+    }
+    else if (match(Token::GT)) {
+        fd->operatorKind = GT_OP;
+    }
+    else if (match(Token::GE)) {
+        fd->operatorKind = GE_OP;
+    }
+    else if (match(Token::LT)) {
+        fd->operatorKind = LT_OP;
+    }
+    else if (match(Token::LE)) {
+        fd->operatorKind = LE_OP;
+    }
+    else if (match(Token::EQ)) {
+        fd->operatorKind = EQ_OP;
+    }
+    else {
+        throw runtime_error("Error sintáctico: operador no válido en declaración");
+    }
+
+        fd->name = "__op_" + Exp::binopToName(fd->operatorKind);
+    } else {
+        match(Token::ID);
+        fd->name = previous->text;
+    }
 
     match(Token::LPAREN);
 

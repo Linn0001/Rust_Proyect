@@ -1,4 +1,4 @@
-#include "Typechecker.h"
+#include "TypeChecker.h"
 #include <iostream>
 #include <algorithm>
 #include <stdexcept>
@@ -60,7 +60,42 @@ void TypeChecker::add_function(FunDec* fd) {
         exit(0);
     }
 
+    vector<Type*> args;
+    for (const auto& ptype : fd->ptypes) {
+        Type* param = Type::from_string(ptype);
+        if (!param) {
+            cerr << "Error: tipo de parámetro no válido en función '" << fd->name << "'." << endl;
+            exit(0);
+        }
+        args.push_back(param);
+    }
+
     functions[fd->name] = returnType;
+    functionArgs[fd->name] = args;
+
+    if (fd->isOperator) {
+        if (args.size() != 2) {
+            cerr << "Error: la sobrecarga de operador requiere dos parámetros." << endl;
+            exit(0);
+        }
+
+        string key = makeOperatorKey(fd->operatorKind, args[0], args[1]);
+        if (operatorTable.find(key) != operatorTable.end()) {
+            cerr << "Error: sobrecarga duplicada para operador '" << Exp::binopToChar(fd->operatorKind)
+                 << "' con tipos " << args[0]->str() << " y " << args[1]->str() << "." << endl;
+            exit(0);
+        }
+
+        operatorTable[key] = {fd->name, returnType};
+    }
+}
+
+string TypeChecker::makeOperatorKey(BinaryOp op, Type* left, Type* right) const {
+    return Exp::binopToName(op) + ":" + to_string(left->ttype) + ":" + to_string(right->ttype);
+}
+
+string TypeChecker::typeToString(Type* t) const {
+    return t ? t->str() : "notype";
 }
 
 // ===========================================================
@@ -115,6 +150,14 @@ void TypeChecker::visit(VarDec* v) {
     }
     env.add_var(v->name, t);
     v->resolved = t;
+
+    if (v->e) {
+        Type* initType = v->e->accept(this);
+        if (!t->match(initType)) {
+            cerr << "Error: tipos incompatibles en la inicialización de '" << v->name << "'." << endl;
+            exit(0);
+        }
+    }
 }
 
 void TypeChecker::visit(FunDec* f) {
@@ -247,6 +290,15 @@ Type* TypeChecker::visit(BinaryExp* e) {
     Type* left  = e->left->accept(this);
     Type* right = e->right->accept(this);
 
+    string key = makeOperatorKey(e->op, left, right);
+    auto overload = operatorTable.find(key);
+    if (overload != operatorTable.end()) {
+        e->hasOverloadedOperator = true;
+        e->overloadTarget = overload->second.functionName;
+        e->type = overload->second.returnType;
+        return overload->second.returnType;
+    }
+
     auto isInt = [&](Type* t) {
         return t->match(t_i8) || t->match(t_i16) || t->match(t_i32) || t->match(t_i64) ||
                t->match(t_u8) || t->match(t_u16) || t->match(t_u32) || t->match(t_u64);
@@ -268,7 +320,8 @@ Type* TypeChecker::visit(BinaryExp* e) {
         case MUL_OP:
         case DIV_OP:
             if (!isNumeric(left) || !isNumeric(right)) {
-                cerr << "Error: operación aritmética requiere operandos numéricos.\n";
+                cerr << "Error: no existe sobrecarga para '" << Exp::binopToChar(e->op)
+                     << "' con tipos " << typeToString(left) << " y " << typeToString(right) << ".\n";
                 exit(0);
             }
             resultType = left;  // Simplificación: usar tipo izquierdo
@@ -330,7 +383,6 @@ Type* TypeChecker::visit(IdExp* e) {
     }
     Type* t = env.lookup(e->val);
     e->type = t;
-    return env.lookup(e->val);
     return t;
 }
 
@@ -339,6 +391,22 @@ Type* TypeChecker::visit(FCallExp* e) {
     if (it == functions.end()) {
         cerr << "Error: llamada a función no declarada '" << e->name << "'." << endl;
         exit(0);
+    }
+    auto argsIt = functionArgs.find(e->name);
+    if (argsIt != functionArgs.end()) {
+        if (argsIt->second.size() != e->args.size()) {
+            cerr << "Error: número incorrecto de argumentos en llamada a '" << e->name << "'." << endl;
+            exit(0);
+        }
+
+        for (size_t i = 0; i < e->args.size(); ++i) {
+            Type* argType = e->args[i]->accept(this);
+            if (!argType->match(argsIt->second[i])) {
+                cerr << "Error: tipo de argumento inválido en posición " << i
+                     << " al llamar a '" << e->name << "'" << endl;
+                exit(0);
+            }
+        }
     }
     e->type = it->second;
     return it->second;

@@ -38,6 +38,7 @@ ostream& operator<<(ostream& outs, const Token& tok) {
         case Token::PRINTLN:  outs << "TOKEN(PRINTLN, \"" << tok.text << "\")"; break;
         case Token::TRUE:     outs << "TOKEN(TRUE, \"" << tok.text << "\")"; break;
         case Token::FALSE:    outs << "TOKEN(FALSE, \"" << tok.text << "\")"; break;
+        case Token::OPERATOR: outs << "TOKEN(OPERATOR, \"" << tok.text << "\")"; break;
 
         // Identificadores y literales
         case Token::ID:       outs << "TOKEN(ID, \"" << tok.text << "\")"; break;
@@ -58,6 +59,8 @@ ostream& operator<<(ostream& outs, const Token& tok) {
         case Token::LT:       outs << "TOKEN(LT, \"" << tok.text << "\")"; break;
         case Token::LE:       outs << "TOKEN(LE, \"" << tok.text << "\")"; break;
         case Token::EQ:       outs << "TOKEN(EQ, \"" << tok.text << "\")"; break;
+        case Token::AND:     outs << "TOKEN(AND, \"" << tok.text << "\")"; break;
+        case Token::OR:      outs << "TOKEN(OR, \"" << tok.text << "\")"; break;
 
         // Símbolos
         case Token::LPAREN:   outs << "TOKEN(LPAREN, \"" << tok.text << "\")"; break;

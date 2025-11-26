@@ -106,6 +106,7 @@ Token* Scanner::nextToken() {
         if (lexema == "for")    return new Token(Token::FOR, input, first, current - first);
         if (lexema == "in")     return new Token(Token::IN, input, first, current - first);
         if (lexema == "while")  return new Token(Token::WHILE, input, first, current - first);
+        if (lexema == "operator") return new Token(Token::OPERATOR, input, first, current - first);
 
         if (lexema == "println!") return new Token(Token::PRINTLN, input, first, current - first);
 

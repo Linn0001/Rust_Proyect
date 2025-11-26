@@ -200,6 +200,20 @@ int GenCodeVisitor::visit(AssignStm* stm) {
 }
 
 int GenCodeVisitor::visit(BinaryExp* exp) {
+    if (exp->hasOverloadedOperator && !exp->overloadTarget.empty()) {
+        vector<string> argRegs = {"%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"};
+
+        exp->left->accept(this);
+        out << " movq %rax, " << argRegs[0] << "\n";
+
+        if (exp->right) {
+            exp->right->accept(this);
+            out << " movq %rax, " << argRegs[1] << "\n";
+        }
+
+        out << " call " << exp->overloadTarget << "\n";
+        return 0;
+    }
     // Verificar si es operación con flotantes
     bool isFloat = (exp->left->type &&
                     (exp->left->type->ttype == Type::F32 ||
