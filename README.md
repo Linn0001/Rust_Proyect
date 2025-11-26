@@ -27,5 +27,5 @@ make
 2. Ejecutar:
 
 ```bash
-./proyecto_rust_base ../input/test.rs
+./proyecto_rust_base ../tests/Base/TestX.rs
 ```
