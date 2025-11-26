@@ -13,6 +13,7 @@ using namespace std;
 class Visitor;
 class VarDec;
 class TypeVisitor;
+class ForStm;
 
 
 // Operadores binarios soportados
@@ -59,9 +60,9 @@ public:
 
 class NumberExp : public Exp {
 public:
-    int val;
+    long long val;
 
-    NumberExp(int v);
+    NumberExp(long long v);
     int accept(Visitor* visitor);
     Type* accept(TypeVisitor* visitor);
     ~NumberExp();
@@ -183,6 +184,20 @@ public:
     void accept(TypeVisitor* visitor);
     ~WhileStm();
 };
+
+class ForStm : public Stm {
+public:
+    string id;   // iterador: for i in ...
+    Exp* start;  // expresión inicio
+    Exp* end;    // expresión fin
+    Body* b;     // cuerpo del for
+
+    ForStm(string id, Exp* s, Exp* e, Body* b);
+    int accept(Visitor* visitor) override;
+    void accept(TypeVisitor* visitor) override;
+    ~ForStm();
+};
+
 
 class AssignStm : public Stm {
 public:

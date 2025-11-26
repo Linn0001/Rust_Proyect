@@ -27,6 +27,8 @@ class Body;
 class VarDec;
 class FCallExp;
 class IdExp;
+class ForStm;
+
 
 // ----------------------------------------------
 // VISITOR DE TIPOS (interfaz)
@@ -42,9 +44,12 @@ public:
     // Sentencias
     virtual void visit(IfStm* stm) = 0;
     virtual void visit(WhileStm* stm) = 0;
+
+
     virtual void visit(PrintStm* stm) = 0;
     virtual void visit(AssignStm* stm) = 0;
     virtual void visit(ReturnStm* stm) = 0;
+    virtual void visit(ForStm* stm) = 0;
 
     // Expresiones
     virtual Type* visit(BinaryExp* e) = 0;
@@ -99,6 +104,8 @@ public:
     // --- Sentencias ---
     void visit(IfStm* stm) override;
     void visit(WhileStm* stm) override;
+    void visit(ForStm* stm) override;
+
     void visit(PrintStm* stm) override;
     void visit(AssignStm* stm) override;
     void visit(ReturnStm* stm) override;

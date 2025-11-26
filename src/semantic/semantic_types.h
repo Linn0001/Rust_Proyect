@@ -70,7 +70,7 @@ public:
         if (s == "i8")  return I8;
         if (s == "i16") return I16;
         if (s == "i32") return I32;
-        if (s == "i64") return I64;
+        if (s == "i64" || s == "long") return I64;
 
         if (s == "u8")  return U8;
         if (s == "u16") return U16;
