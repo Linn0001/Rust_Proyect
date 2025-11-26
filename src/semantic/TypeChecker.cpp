@@ -1,5 +1,6 @@
 #include "Typechecker.h"
 #include <iostream>
+#include <algorithm>
 #include <stdexcept>
 using namespace std;
 
