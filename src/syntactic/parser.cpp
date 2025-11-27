@@ -303,39 +303,44 @@ Stm* Parser::parseStm() {
     Exp* Parser::parseCE() {
         Exp* l = parseBE();
 
+        // Ternaria: cond ? expr1 : expr2
+        if (match(Token::QMARK)) {
+            Exp* thenExp = parseCE();   // o parseBE(), pero así permites anidación
+            match(Token::COL);
+            Exp* elseExp = parseCE();
+            return new TernaryExp(l, thenExp, elseExp);
+        }
+
+        // Si no hay '?', seguimos con las comparaciones normales
         if (match(Token::GT)) {
             BinaryOp op = GT_OP;
             Exp* r = parseBE();
-
             l = new BinaryExp(l, r, op);
         }
         else if (match(Token::GE)) {
             BinaryOp op = GE_OP;
             Exp* r = parseBE();
-
             l = new BinaryExp(l, r, op);
         }
         else if (match(Token::LT)) {
             BinaryOp op = LT_OP;
             Exp* r = parseBE();
-
             l = new BinaryExp(l, r, op);
         }
         else if (match(Token::LE)) {
             BinaryOp op = LE_OP;
             Exp* r = parseBE();
-
             l = new BinaryExp(l, r, op);
         }
         else if (match(Token::EQ)) {
             BinaryOp op = EQ_OP;
             Exp* r = parseBE();
-
             l = new BinaryExp(l, r, op);
         }
 
         return l;
     }
+
 
 
     Exp* Parser::parseBE() {

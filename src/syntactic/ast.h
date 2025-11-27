@@ -90,6 +90,18 @@ public:
     ~BoolExp();
 };
 
+class TernaryExp : public Exp {
+public:
+    Exp* cond;
+    Exp* thenExp;
+    Exp* elseExp;
+
+    TernaryExp(Exp* c, Exp* t, Exp* e);
+    int accept(Visitor* visitor) override;
+    Type* accept(TypeVisitor* visitor) override;
+    ~TernaryExp();
+};
+
 class IdExp : public Exp {
 public:
     string val;

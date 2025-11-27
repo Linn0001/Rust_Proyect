@@ -44,6 +44,7 @@ public:
         MUL,      // *
         DIV,      // /
         POW,      // **
+        QMARK, //?
 
         GT,       // >
         GE,       // >=

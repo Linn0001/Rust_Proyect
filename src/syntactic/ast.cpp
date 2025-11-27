@@ -68,6 +68,16 @@ AssignStm::AssignStm(string variable, Exp* expresion) {
 
 AssignStm::~AssignStm() {}
 
+//                     TernaryExp
+TernaryExp::TernaryExp(Exp* c, Exp* t, Exp* e)
+    : cond(c), thenExp(t), elseExp(e) {}
+
+TernaryExp::~TernaryExp() {
+    delete cond;
+    delete thenExp;
+    delete elseExp;
+}
+
 //                     IfStm
 IfStm::IfStm(Exp* c, Body* t, Body* e)
     : cond(c), then(t), els(e) {}

@@ -23,7 +23,7 @@ class VarDec;
 class FCallExp;
 class ReturnStm;
 class FunDec;
-
+class TernaryExp;
 class ForStm;
 
 
@@ -39,6 +39,7 @@ public:
     virtual int visit(WhileStm* stm) = 0;
     virtual int visit(IfStm* stm) = 0;
     virtual int visit(AssignStm* stm) = 0;
+    virtual int visit(TernaryExp* e) = 0;
     virtual int visit(Body* body) = 0;
     virtual int visit(VarDec* vd) = 0;
     virtual int visit(FCallExp* fcall) = 0;
@@ -75,6 +76,8 @@ public:
     bool entornoFuncion = false;
     string nombreFuncion;
 
+
+
     int visit(BinaryExp* exp) override;
     int visit(NumberExp* exp) override;
     int visit(FloatExp* exp) override;
@@ -86,6 +89,7 @@ public:
     int visit(WhileStm* stm) override;
     int visit(IfStm* stm) override;
     int visit(Body* body) override;
+    int visit(TernaryExp* exp) override;
     int visit(VarDec* vd) override;
     int visit(FCallExp* fcall) override;
     int visit(ReturnStm* r) override;

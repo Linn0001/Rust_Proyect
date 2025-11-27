@@ -11,6 +11,7 @@ Type* BoolExp::accept(TypeVisitor* v) { return v->visit(this); }
 Type* IdExp::accept(TypeVisitor* v) { return v->visit(this); }
 Type* BinaryExp::accept(TypeVisitor* v) { return v->visit(this); }
 Type* FCallExp::accept(TypeVisitor* v) { return v->visit(this); }
+Type* TernaryExp::accept(TypeVisitor* v) { return v->visit(this); }
 
 void IfStm::accept(TypeVisitor* v) { v->visit(this); }
 void WhileStm::accept(TypeVisitor* v) { v->visit(this); }
@@ -416,6 +417,85 @@ Type* TypeChecker::visit(FloatExp* e) {
 Type* TypeChecker::visit(BoolExp* e) {
     e->type = t_bool;
     return t_bool;
+}
+
+Type* TypeChecker::visit(TernaryExp* e) {
+    Type* condType = e->cond->accept(this);
+    Type* thenType = e->thenExp->accept(this);
+    Type* elseType = e->elseExp->accept(this);
+
+    auto isBool = [&](Type* t) {
+        return t->match(t_bool);
+    };
+
+    auto isInt = [&](Type* t) {
+        return t->match(t_i8)  || t->match(t_i16) || t->match(t_i32) || t->match(t_i64) ||
+               t->match(t_u8)  || t->match(t_u16) || t->match(t_u32) || t->match(t_u64);
+    };
+
+    auto isFloat = [&](Type* t) {
+        return t->match(t_f32) || t->match(t_f64);
+    };
+
+    auto isNumeric = [&](Type* t) {
+        return isInt(t) || isFloat(t);
+    };
+
+    auto commonIntType = [&](Type* a, Type* b) -> Type* {
+        if (!isInt(a) || !isInt(b)) return nullptr;
+
+        int sizeA = Type::sizeof_type(a->ttype);
+        int sizeB = Type::sizeof_type(b->ttype);
+        int size  = std::max(sizeA, sizeB);
+
+        bool signedA = (a->ttype == Type::I8 || a->ttype == Type::I16 ||
+                        a->ttype == Type::I32 || a->ttype == Type::I64);
+        bool signedB = (b->ttype == Type::I8 || b->ttype == Type::I16 ||
+                        b->ttype == Type::I32 || b->ttype == Type::I64);
+        bool resultSigned = signedA || signedB;
+
+        if (resultSigned) {
+            if (size <= 1) return t_i8;
+            if (size <= 2) return t_i16;
+            if (size <= 4) return t_i32;
+            return t_i64;
+        } else {
+            if (size <= 1) return t_u8;
+            if (size <= 2) return t_u16;
+            if (size <= 4) return t_u32;
+            return t_u64;
+        }
+    };
+
+    if (!isBool(condType)) {
+        cerr << "Error: condición de expresión ternaria debe ser bool.\n";
+        exit(0);
+    }
+
+    Type* resultType = nullptr;
+
+    // Caso 1: tipos iguales
+    if (thenType->match(elseType)) {
+        resultType = thenType;
+    }
+    // Caso 2: ambas numéricas (reutilizamos la lógica de sobrecarga)
+    else if (isNumeric(thenType) && isNumeric(elseType)) {
+        if (isInt(thenType) && isInt(elseType)) {
+            resultType = commonIntType(thenType, elseType);
+        } else if (isFloat(thenType) && isFloat(elseType)) {
+            if (thenType->match(t_f64) || elseType->match(t_f64)) resultType = t_f64;
+            else resultType = t_f32;
+        } else {
+            cerr << "Error: expresión ternaria no soporta mezclar int y float.\n";
+            exit(0);
+        }
+    } else {
+        cerr << "Error: ramas de expresión ternaria deben tener tipos compatibles.\n";
+        exit(0);
+    }
+
+    e->type = resultType;
+    return resultType;
 }
 
 Type* TypeChecker::visit(IdExp* e) {

@@ -25,6 +25,7 @@ int FunDec::accept(Visitor* visitor)        { return visitor->visit(this); }
 int Program::accept(Visitor* visitor)       { return visitor->visit(this); }
 int ReturnStm::accept(Visitor* visitor)     { return visitor->visit(this); }
 int ForStm::accept(Visitor *visitor)        { return visitor->visit(this); }
+int TernaryExp::accept(Visitor* visitor)    { return visitor->visit(this); }
 
 ///////////////////////////////////////////////////////////////////////////////////
 //                               GenCodeVisitor – Helpers
@@ -345,6 +346,30 @@ int GenCodeVisitor::visit(BinaryExp* exp) {
                 break;
         }
     }
+
+    return 0;
+}
+
+int GenCodeVisitor::visit(TernaryExp* e) {
+    int label = labelcont++;
+    string elseLabel = "tern_else_" + to_string(label);
+    string endLabel  = "tern_end_" + to_string(label);
+
+    // Evaluar la condición: resultado en %rax (0 = false, !=0 = true)
+    e->cond->accept(this);
+    out << " cmpq $0, %rax\n";
+    out << " je " << elseLabel << "\n";
+
+    // Rama then: deja el valor en %rax
+    e->thenExp->accept(this);
+    out << " jmp " << endLabel << "\n";
+
+    // Rama else
+    out << elseLabel << ":\n";
+    e->elseExp->accept(this);
+
+    // Fin: %rax contiene el resultado final
+    out << endLabel << ":\n";
 
     return 0;
 }

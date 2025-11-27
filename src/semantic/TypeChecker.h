@@ -28,7 +28,7 @@ class VarDec;
 class FCallExp;
 class IdExp;
 class ForStm;
-
+class TernaryExp;
 
 // ----------------------------------------------
 // VISITOR DE TIPOS (interfaz)
@@ -53,6 +53,7 @@ public:
 
     // Expresiones
     virtual Type* visit(BinaryExp* e) = 0;
+    virtual Type* visit(TernaryExp* e) = 0;
     virtual Type* visit(NumberExp* e) = 0;
     virtual Type* visit(FloatExp* e) = 0;
     virtual Type* visit(BoolExp* e) = 0;
@@ -112,6 +113,7 @@ public:
 
     // --- Expresiones ---
     Type* visit(BinaryExp* e) override;
+    Type* visit(TernaryExp* e) override;
     Type* visit(NumberExp* e) override;
     Type* visit(FloatExp* e) override;
     Type* visit(BoolExp *e) override;
