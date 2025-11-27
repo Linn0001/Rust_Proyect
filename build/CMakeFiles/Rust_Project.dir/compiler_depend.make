@@ -1092,7 +1092,7 @@ CMakeFiles/Rust_Project.dir/src/semantic/DebugVisitor.cpp.o: /mnt/c/Users/ADMIN/
   /usr/lib/gcc/x86_64-linux-gnu/13/include/stddef.h
 
 CMakeFiles/Rust_Project.dir/src/semantic/TypeChecker.cpp.o: /mnt/c/Users/ADMIN/Rust_Proyect/src/semantic/TypeChecker.cpp \
-  /mnt/c/Users/ADMIN/Rust_Proyect/src/semantic/TypeChecker.h \
+  /mnt/c/Users/ADMIN/Rust_Proyect/src/semantic/Typechecker.h \
   /mnt/c/Users/ADMIN/Rust_Proyect/src/semantic/environment.h \
   /mnt/c/Users/ADMIN/Rust_Proyect/src/semantic/semantic_types.h \
   /mnt/c/Users/ADMIN/Rust_Proyect/src/syntactic/ast.h \
@@ -2230,6 +2230,8 @@ CMakeFiles/Rust_Project.dir/src/syntactic/parser.cpp.o: /mnt/c/Users/ADMIN/Rust_
 /usr/include/x86_64-linux-gnu/bits/uintn-identity.h:
 
 /usr/include/c++/13/bits/locale_facets_nonio.h:
+
+/mnt/c/Users/ADMIN/Rust_Proyect/src/semantic/Typechecker.h:
 
 /usr/include/c++/13/bits/fs_dir.h:
 

@@ -1098,7 +1098,7 @@ CMakeFiles/Rust_Project.dir/src/semantic/DebugVisitor.cpp.o
 
 CMakeFiles/Rust_Project.dir/src/semantic/TypeChecker.cpp.o
  /mnt/c/Users/ADMIN/Rust_Proyect/src/semantic/TypeChecker.cpp
- /mnt/c/Users/ADMIN/Rust_Proyect/src/semantic/TypeChecker.h
+ /mnt/c/Users/ADMIN/Rust_Proyect/src/semantic/Typechecker.h
  /mnt/c/Users/ADMIN/Rust_Proyect/src/semantic/environment.h
  /mnt/c/Users/ADMIN/Rust_Proyect/src/semantic/semantic_types.h
  /mnt/c/Users/ADMIN/Rust_Proyect/src/syntactic/ast.h

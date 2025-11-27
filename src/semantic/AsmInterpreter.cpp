@@ -495,6 +495,7 @@ void AsmInterpreter::execute(const Instr& ins, int& ip) {
 }
 
 void AsmInterpreter::run() {
+    // Resetear CPU y estructuras
     cpu = Cpu{};
     memByOffset.clear();
     stack.clear();
@@ -503,7 +504,14 @@ void AsmInterpreter::run() {
     lastCmpLhs = 0;
     lastCmpRhs = 0;
 
+    // Punto de entrada: intentar empezar en "main"
     int ip = 0;
+    auto it = labelToIndex.find("main");
+    if (it != labelToIndex.end()) {
+        ip = it->second;   // primera instrucción después de la etiqueta main:
+    }
+
+    // Ejecutar instrucción por instrucción
     while (ip >= 0 && ip < (int)prog.size()) {
         execute(prog[ip], ip);
     }
