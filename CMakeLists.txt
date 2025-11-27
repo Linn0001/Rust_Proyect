@@ -24,4 +24,5 @@ add_executable(Rust_Project
         src/semantic/TypeChecker.h
         src/semantic/environment.h
         src/semantic/semantic_types.h
+        src/opt/optimizer.h
 )
