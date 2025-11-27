@@ -226,6 +226,8 @@ void TypeChecker::visit(AssignStm* stm) {
 
     bool ok = varType->match(expType);
 
+    // 🔧 Flexibilizar literales numéricos: permitir que un literal entero
+    // se asigne a cualquier tipo entero (i32, i64, u32, etc.)
     if (!ok) {
         if (stm->e->isNumberLiteral() && isInt(varType) && isInt(expType)) {
             ok = true;
@@ -239,6 +241,7 @@ void TypeChecker::visit(AssignStm* stm) {
         exit(0);
     }
 }
+
 
 
 

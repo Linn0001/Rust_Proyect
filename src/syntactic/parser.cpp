@@ -172,6 +172,7 @@ Stm* Parser::parseStm() {
     Body* tb = nullptr;
     Body* fb = nullptr;
 
+    // Asignación:  x = expr;
     if (match(Token::ID)) {
         var = previous->text;
         match(Token::ASSIGN);
@@ -179,6 +180,7 @@ Stm* Parser::parseStm() {
 
         return new AssignStm(var, e);
     }
+    // println!("...", expr);
     else if (match(Token::PRINTLN)) {
         match(Token::LPAREN);
         match(Token::STRING);
@@ -188,6 +190,7 @@ Stm* Parser::parseStm() {
 
         return new PrintStm(e);
     }
+    // return(expr);
     else if (match(Token::RETURN)) {
         ReturnStm* r  = new ReturnStm();
 
@@ -197,6 +200,7 @@ Stm* Parser::parseStm() {
 
         return r;
     }
+    // if cond { ... } [else { ... }]
     else if (match(Token::IF)) {
         e = parseCE();
 
@@ -208,25 +212,68 @@ Stm* Parser::parseStm() {
         tb = parseBody();
 
         if (!match(Token::RBRACE)) {
-            cout << "Error: se esperaba '}' después del bloque then." << endl;
+            cout << "Error: se esperaba '}' después de la expresión." << endl;
             exit(1);
         }
 
         if (match(Token::ELSE)) {
-            if (!match(Token::LBRACE)) {
-                cout << "Error: se esperaba '{' después de else." << endl;
-                exit(1);
-            }
+            match(Token::LBRACE);
             fb = parseBody();
+        }
 
-            if (!match(Token::RBRACE)) {
-                cout << "Error: se esperaba '}' al final del bloque else." << endl;
-                exit(1);
-            }
+        if (!match(Token::RBRACE)) {
+            cout << "Error: se esperaba '}' al final de la declaración de if." << endl;
+            exit(1);
         }
 
         a = new IfStm(e, tb, fb);
     }
+    // for i in 0..10 { ... }
+    else if (match(Token::FOR)) {
+        // for <id> in <expr> .. <expr> { Body }
+        string itVar;
+
+        // for i ...
+        if (!match(Token::ID)) {
+            cout << "Error: se esperaba un identificador después de 'for'." << endl;
+            exit(1);
+        }
+        itVar = previous->text;
+
+        // for i in ...
+        if (!match(Token::IN)) {
+            cout << "Error: se esperaba 'in' en el encabezado del for." << endl;
+            exit(1);
+        }
+
+        // for i in <expr> ..
+        Exp* start = parseCE();
+
+        // for i in <expr> .. <expr>
+        if (!match(Token::RANGE)) {
+            cout << "Error: se esperaba '..' en el encabezado del for." << endl;
+            exit(1);
+        }
+
+        Exp* end = parseCE();
+
+        // for i in a..b {
+        if (!match(Token::LBRACE)) {
+            cout << "Error: se esperaba '{' después del encabezado de for." << endl;
+            exit(1);
+        }
+
+        Body* body = parseBody();
+
+        if (!match(Token::RBRACE)) {
+            cout << "Error: se esperaba '}' al final del bloque de for." << endl;
+            exit(1);
+        }
+
+        // Asumiendo que definiste ForStm(string, Exp*, Exp*, Body*)
+        a = new ForStm(itVar, start, end, body);
+    }
+    // while cond { ... }
     else if (match(Token::WHILE)) {
         e = parseCE();
 
@@ -238,57 +285,11 @@ Stm* Parser::parseStm() {
         tb = parseBody();
 
         if (!match(Token::RBRACE)) {
-            cout << "Error: se esperaba '}' al final de la declaración while." << endl;
+            cout << "Error: se esperaba '}' al final de la declaración." << endl;
             exit(1);
         }
 
         a = new WhileStm(e, tb);
-    }
-    else if (match(Token::FOR)) {
-        // Sintaxis esperada:
-        // for i in 1..11 {
-        //     ...
-        // }
-
-        // Identificador del iterador
-        if (!match(Token::ID)) {
-            cout << "Error: se esperaba identificador después de 'for'." << endl;
-            exit(1);
-        }
-        string iter = previous->text;
-
-        // Palabra clave 'in'
-        if (!match(Token::IN)) {
-            cout << "Error: se esperaba 'in' después del iterador en el for." << endl;
-            exit(1);
-        }
-
-        // Expresión de inicio
-        Exp* start = parseCE();
-
-        // Operador de rango '..'
-        if (!match(Token::RANGE)) {
-            cout << "Error: se esperaba '..' en el rango del for." << endl;
-            exit(1);
-        }
-
-        // Expresión de fin
-        Exp* end = parseCE();
-
-        // Cuerpo entre llaves
-        if (!match(Token::LBRACE)) {
-            cout << "Error: se esperaba '{' después del rango en el for." << endl;
-            exit(1);
-        }
-
-        Body* body = parseBody();
-
-        if (!match(Token::RBRACE)) {
-            cout << "Error: se esperaba '}' al final del for." << endl;
-            exit(1);
-        }
-
-        return new ForStm(iter, start, end, body);
     }
     else {
         throw runtime_error("Error sintáctico");
@@ -296,6 +297,7 @@ Stm* Parser::parseStm() {
 
     return a;
 }
+
 
 
     Exp* Parser::parseCE() {
