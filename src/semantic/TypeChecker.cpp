@@ -1,4 +1,4 @@
-#include "Typechecker.h"
+#include "TypeChecker.h"
 #include <iostream>
 #include <algorithm>
 #include <stdexcept>
@@ -219,21 +219,27 @@ void TypeChecker::visit(AssignStm* stm) {
     Type* varType = env.lookup(stm->id);
     Type* expType = stm->e->accept(this);
 
-    // 1) Si son exactamente iguales
-    if (varType->match(expType)) {
-        return;
+    auto isInt = [&](Type* t) {
+        return t->match(t_i8)  || t->match(t_i16) || t->match(t_i32) || t->match(t_i64) ||
+               t->match(t_u8)  || t->match(t_u16) || t->match(t_u32) || t->match(t_u64);
+    };
+
+    bool ok = varType->match(expType);
+
+    if (!ok) {
+        if (stm->e->isNumberLiteral() && isInt(varType) && isInt(expType)) {
+            ok = true;
+            // Opcional: fijar el tipo concreto del literal al de la variable
+            stm->e->type = varType;
+        }
     }
 
-    // 2) Permitir asignaciones entre i32 e i64 en ambas direcciones
-    if ((varType->ttype == Type::I64 && expType->ttype == Type::I32) ||
-        (varType->ttype == Type::I32 && expType->ttype == Type::I64)) {
-        return;
+    if (!ok) {
+        cerr << "Error: tipos incompatibles en asignación a '" << stm->id << "'." << endl;
+        exit(0);
     }
-
-    cerr << "Error: tipos incompatibles en asignación a '"
-         << stm->id << "'." << endl;
-    exit(0);
 }
+
 
 
 void TypeChecker::visit(ReturnStm* stm) {
