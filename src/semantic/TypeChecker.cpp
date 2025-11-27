@@ -242,9 +242,6 @@ void TypeChecker::visit(AssignStm* stm) {
     }
 }
 
-
-
-
 void TypeChecker::visit(ReturnStm* stm) {
     // Si no hay expresión, el return es equivalente a retornar unit
     Type* retType = (stm->e ? stm->e->accept(this) : t_unit);
@@ -269,9 +266,18 @@ Type* TypeChecker::visit(BinaryExp* e) {
     Type* left  = e->left->accept(this);
     Type* right = e->right->accept(this);
 
+    // ----- pequeños helpers de tipos -----
     auto isInt = [&](Type* t) {
-        return t->match(t_i8) || t->match(t_i16) || t->match(t_i32) || t->match(t_i64) ||
-               t->match(t_u8) || t->match(t_u16) || t->match(t_u32) || t->match(t_u64);
+        return t->match(t_i8)  || t->match(t_i16) || t->match(t_i32) || t->match(t_i64) ||
+               t->match(t_u8)  || t->match(t_u16) || t->match(t_u32) || t->match(t_u64);
+    };
+
+    auto isSignedInt = [&](Type* t) {
+        return t->match(t_i8) || t->match(t_i16) || t->match(t_i32) || t->match(t_i64);
+    };
+
+    auto isUnsignedInt = [&](Type* t) {
+        return t->match(t_u8) || t->match(t_u16) || t->match(t_u32) || t->match(t_u64);
     };
 
     auto isFloat = [&](Type* t) {
@@ -282,9 +288,41 @@ Type* TypeChecker::visit(BinaryExp* e) {
         return isInt(t) || isFloat(t);
     };
 
+    auto isBool = [&](Type* t) {
+        return t->match(t_bool);
+    };
+
+    // Dado dos enteros, escoger el tipo entero "común"
+    auto commonIntType = [&](Type* a, Type* b) -> Type* {
+        if (!isInt(a) || !isInt(b)) return nullptr;
+
+        int sizeA = Type::sizeof_type(a->ttype);  // 1,2,4,8 bytes
+        int sizeB = Type::sizeof_type(b->ttype);
+        int size  = max(sizeA, sizeB);
+
+        bool signedA = isSignedInt(a);
+        bool signedB = isSignedInt(b);
+        bool resultSigned = signedA || signedB;   // si alguno es signed, el resultado lo tratamos como signed
+
+        if (resultSigned) {
+            if (size <= 1) return t_i8;
+            if (size <= 2) return t_i16;
+            if (size <= 4) return t_i32;
+            return t_i64;
+        } else {
+            if (size <= 1) return t_u8;
+            if (size <= 2) return t_u16;
+            if (size <= 4) return t_u32;
+            return t_u64;
+        }
+    };
+
     Type* resultType = nullptr;
 
     switch (e->op) {
+        // -----------------------------
+        // Operaciones aritméticas
+        // -----------------------------
         case PLUS_OP:
         case MINUS_OP:
         case MUL_OP:
@@ -293,9 +331,29 @@ Type* TypeChecker::visit(BinaryExp* e) {
                 cerr << "Error: operación aritmética requiere operandos numéricos.\n";
                 exit(0);
             }
-            resultType = left;  // Simplificación: usar tipo izquierdo
+
+            if (isFloat(left) || isFloat(right)) {
+                // No mezclamos de momento int con float
+                if (!(isFloat(left) && isFloat(right))) {
+                    cerr << "Error: no se permite operar entre enteros y flotantes.\n";
+                    exit(0);
+                }
+
+                // Si alguno es f64, resultado f64; si no, f32
+                if (left->match(t_f64) || right->match(t_f64)) {
+                    resultType = t_f64;
+                } else {
+                    resultType = t_f32;
+                }
+            } else {
+                // Ambos son enteros, posiblemente de distinto tamaño/signo
+                resultType = commonIntType(left, right);
+            }
             break;
 
+        // -----------------------------
+        // Comparaciones >, >=, <, <=
+        // -----------------------------
         case GT_OP:
         case GE_OP:
         case LT_OP:
@@ -304,25 +362,34 @@ Type* TypeChecker::visit(BinaryExp* e) {
                 cerr << "Error: comparación requiere operandos numéricos.\n";
                 exit(0);
             }
-            // aunque sean de distinto tamaño (i32 vs i64, por ejemplo).
-            if (!(isInt(left) && isInt(right)) &&
-                !(isFloat(left) && isFloat(right))) {
+
+            // Permitimos int-int o float-float, pero no mezclados
+            if ((isInt(left) && isInt(right)) ||
+                (isFloat(left) && isFloat(right))) {
+                resultType = t_bool;
+            } else {
                 cerr << "Error: comparación entre tipos incompatibles: "
                      << left->str() << " y " << right->str() << "\n";
                 exit(0);
             }
-
-            resultType = t_bool;
             break;
 
+        // -----------------------------
+        // Igualdad ==
+        // -----------------------------
         case EQ_OP:
-            // Igualdad: también permitimos ints entre sí o floats entre sí
-            if (!(isInt(left) && isInt(right)) &&
-                !(isFloat(left) && isFloat(right))) {
+            // Igualdad numérica: int-int o float-float
+            if ((isInt(left) && isInt(right)) ||
+                (isFloat(left) && isFloat(right))) {
+                resultType = t_bool;
+            }
+            // Igualdad booleana
+            else if (isBool(left) && isBool(right)) {
+                resultType = t_bool;
+            } else {
                 cerr << "Error: comparación de igualdad requiere tipos compatibles.\n";
                 exit(0);
             }
-            resultType = t_bool;
             break;
 
         default:
@@ -333,6 +400,7 @@ Type* TypeChecker::visit(BinaryExp* e) {
     e->type = resultType;
     return resultType;
 }
+
 
 
 Type* TypeChecker::visit(NumberExp* e) {

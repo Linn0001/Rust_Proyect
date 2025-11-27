@@ -643,12 +643,14 @@ void GenCodeVisitor::loadValue(const string& location, int size, Type::TType tty
             } else {
                 out << " movzbq " << location << ", %rax\n"; // extensión cero para bool/u8
             }
+            break;
         case 2:  // i16, u16
             if (ttype == Type::I16) {
                 out << " movswq " << location << ", %rax\n";
             } else {
                 out << " movzwq " << location << ", %rax\n";
             }
+            break;
         case 4:  // i32, f32, u32
             // Para enteros con signo usar movslq
             if (ttype == Type::I32) {
