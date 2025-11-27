@@ -137,12 +137,21 @@ int GenCodeVisitor::visit(NumberExp* exp) {
 }
 
 int GenCodeVisitor::visit(FloatExp* exp) {
-    // Cargar valor flotante a registro XMM
-    // Necesitamos ponerlo en memoria primero
-    out << " movq $" << *(long long*)&exp->val << ", %rax\n";
+    // Convertimos el double a sus bits enteros (64 bits)
+    union {
+        double d;
+        unsigned long long u;
+    } conv;
+    conv.d = exp->val;
+
+    // movabsq permite un inmediato de 64 bits completo a %rax
+    out << " movabsq $" << conv.u << ", %rax\n";
     out << " movq %rax, %xmm0\n";
+
     return 0;
 }
+
+
 
 int GenCodeVisitor::visit(BoolExp* exp) {
     out << " movq $" << (exp->val ? 1 : 0) << ", %rax\n";
@@ -207,94 +216,57 @@ int GenCodeVisitor::visit(BinaryExp* exp) {
                      exp->left->type->ttype == Type::F64));
 
     if (isFloat) {
-        // ====== EVALUAR LEFT ======
-        // left -> %rax (por NumberExp/IdExp/FloatExp)
+        // 1) Evaluar left → %rax (bits del double)
         exp->left->accept(this);
-        // Copiar bits de left a xmm0
-        out << " movq %rax, %xmm0\n";
-        // Guardar left (xmm0) en la pila
-        out << " subq $8, %rsp\n";
-        out << " movsd %xmm0, (%rsp)\n";
+        out << " subq $16, %rsp\n";
+        out << " movq %rax, 8(%rsp)\n";   // guardar left en [rsp+8]
 
-        // ====== EVALUAR RIGHT ======
-        // right -> %rax
+        // 2) Evaluar right → %rax
         exp->right->accept(this);
-        // Copiar bits de right a xmm1
-        out << " movq %rax, %xmm1\n";
+        out << " movq %rax, 0(%rsp)\n";   // guardar right en [rsp]
 
-        // ====== RESTAURAR LEFT A xmm0 ======
-        out << " movsd (%rsp), %xmm0\n";
-        out << " addq $8, %rsp\n";
-
-        // Ahora:
-        //  - left  en %xmm0
-        //  - right en %xmm1
         switch (exp->op) {
-            // -------------------------
-            // Aritmética con flotantes
-            // -------------------------
-            case PLUS_OP:
-                out << " addsd %xmm1, %xmm0\n";
-                out << " movq %xmm0, %rax\n";
+            case PLUS_OP:  // left + right
+                out << " fldl 8(%rsp)\n";   // st0 = left
+                out << " fldl 0(%rsp)\n";   // st0 = right, st1 = left
+                out << " faddp %st, %st(1)\n"; // st0 = left + right
+                out << " fstpl 0(%rsp)\n";  // guardar resultado en [rsp]
                 break;
 
-            case MINUS_OP:
-                out << " subsd %xmm1, %xmm0\n";
-                out << " movq %xmm0, %rax\n";
+            case MINUS_OP: // left - right
+                out << " fldl 8(%rsp)\n";   // st0 = left
+                out << " fldl 0(%rsp)\n";   // st0 = right, st1 = left
+                out << " fsubp %st, %st(1)\n"; // st0 = left - right
+                out << " fstpl 0(%rsp)\n";
                 break;
 
-            case MUL_OP:
-                out << " mulsd %xmm1, %xmm0\n";
-                out << " movq %xmm0, %rax\n";
+            case MUL_OP:   // left * right
+                out << " fldl 8(%rsp)\n";   // st0 = left
+                out << " fldl 0(%rsp)\n";   // st0 = right, st1 = left
+                out << " fmulp %st, %st(1)\n"; // st0 = left * right
+                out << " fstpl 0(%rsp)\n";
                 break;
 
-            case DIV_OP:
-                out << " divsd %xmm1, %xmm0\n";
-                out << " movq %xmm0, %rax\n";
-                break;
-
-            // -------------------------
-            // Comparaciones con flotantes
-            // Queremos SIEMPRE comparar left vs right
-            // -------------------------
-            case GT_OP:  // left > right
-                out << " ucomisd %xmm0, %xmm1\n";  // compara left con right
-                out << " seta %al\n";              // above (>)
-                out << " movzbq %al, %rax\n";
-                break;
-
-            case GE_OP:  // left >= right
-                out << " ucomisd %xmm0, %xmm1\n";
-                out << " setae %al\n";             // above or equal (>=)
-                out << " movzbq %al, %rax\n";
-                break;
-
-            case LT_OP:  // left < right
-                out << " ucomisd %xmm0, %xmm1\n";
-                out << " setb %al\n";              // below (<)
-                out << " movzbq %al, %rax\n";
-                break;
-
-            case LE_OP:  // left <= right
-                out << " ucomisd %xmm0, %xmm1\n";
-                out << " setbe %al\n";             // below or equal (<=)
-                out << " movzbq %al, %rax\n";
-                break;
-
-            case EQ_OP:  // left == right, y no NaN
-                out << " ucomisd %xmm0, %xmm1\n";
-                out << " sete %al\n";              // iguales
-                out << " setnp %cl\n";             // no NaN
-                out << " andb %cl, %al\n";
-                out << " movzbq %al, %rax\n";
+            case DIV_OP:   // left / right
+                out << " fldl 8(%rsp)\n";   // st0 = left
+                out << " fldl 0(%rsp)\n";   // st0 = right, st1 = left
+                out << " fdivp %st, %st(1)\n"; // st0 = left / right
+                out << " fstpl 0(%rsp)\n";
                 break;
 
             default:
-                cerr << "Error: operador no soportado para flotantes.\n";
+                cerr << "Error: operador flotante no soportado (solo +, -, *, / por ahora)." << endl;
                 exit(1);
         }
-    } else {
-        // ====== tu código de enteros tal cual ======
+
+        // 3) Cargar resultado a %rax (bits del double)
+        out << " movq 0(%rsp), %rax\n";
+        out << " addq $16, %rsp\n";
+
+        return 0;
+    }
+    else {
+        // ====== CAMINO PARA ENTEROS (tu código original) ======
         exp->left->accept(this);
         out << " pushq %rax\n";
         exp->right->accept(this);
@@ -351,10 +323,11 @@ int GenCodeVisitor::visit(BinaryExp* exp) {
                 out << " movzbq %al, %rax\n";
                 break;
         }
+        return 0;
     }
-
-    return 0;
 }
+
+
 
 
 int GenCodeVisitor::visit(TernaryExp* e) {
