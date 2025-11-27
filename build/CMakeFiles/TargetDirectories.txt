@@ -1,0 +1,3 @@
+/mnt/c/Users/ADMIN/Rust_Proyect/build/CMakeFiles/Rust_Project.dir
+/mnt/c/Users/ADMIN/Rust_Proyect/build/CMakeFiles/edit_cache.dir
+/mnt/c/Users/ADMIN/Rust_Proyect/build/CMakeFiles/rebuild_cache.dir

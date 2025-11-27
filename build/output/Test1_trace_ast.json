@@ -1,0 +1,218 @@
+{
+  "steps": [
+    {
+      "label": "Antes de ejecutar main()",
+      "line": -1,
+      "registers": {
+        "RAX": 0,
+        "RBX": 0,
+        "RCX": 0,
+        "RDX": 0,
+        "RSI": 0,
+        "RDI": 0,
+        "RBP": 0,
+        "RSP": 0,
+        "ZF": 0,
+        "SF": 0
+      },
+      "stack": [
+        {"offset": 0, "value": 0, "label": "RBP_OLD", "kind": "int", "bits": 64, "fvalue": 0}
+      ]
+    },
+    {
+      "label": "Declaración de variable x",
+      "line": -1,
+      "registers": {
+        "RAX": 0,
+        "RBX": 0,
+        "RCX": 0,
+        "RDX": 0,
+        "RSI": 0,
+        "RDI": 0,
+        "RBP": 0,
+        "RSP": -8,
+        "ZF": 0,
+        "SF": 0
+      },
+      "stack": [
+        {"offset": 0, "value": 0, "label": "RBP_OLD", "kind": "int", "bits": 64, "fvalue": 0},
+        {"offset": -8, "value": 0, "label": "x", "kind": "int", "bits": 64, "fvalue": 0}
+      ]
+    },
+    {
+      "label": "Declaración de variable y",
+      "line": -1,
+      "registers": {
+        "RAX": 0,
+        "RBX": 0,
+        "RCX": 0,
+        "RDX": 0,
+        "RSI": 0,
+        "RDI": 0,
+        "RBP": 0,
+        "RSP": -16,
+        "ZF": 0,
+        "SF": 0
+      },
+      "stack": [
+        {"offset": 0, "value": 0, "label": "RBP_OLD", "kind": "int", "bits": 64, "fvalue": 0},
+        {"offset": -8, "value": 0, "label": "x", "kind": "int", "bits": 64, "fvalue": 0},
+        {"offset": -16, "value": 0, "label": "y", "kind": "int", "bits": 64, "fvalue": 0}
+      ]
+    },
+    {
+      "label": "Declaración de variable z",
+      "line": -1,
+      "registers": {
+        "RAX": 0,
+        "RBX": 0,
+        "RCX": 0,
+        "RDX": 0,
+        "RSI": 0,
+        "RDI": 0,
+        "RBP": 0,
+        "RSP": -24,
+        "ZF": 0,
+        "SF": 0
+      },
+      "stack": [
+        {"offset": 0, "value": 0, "label": "RBP_OLD", "kind": "int", "bits": 64, "fvalue": 0},
+        {"offset": -8, "value": 0, "label": "x", "kind": "int", "bits": 64, "fvalue": 0},
+        {"offset": -16, "value": 0, "label": "y", "kind": "int", "bits": 64, "fvalue": 0},
+        {"offset": -24, "value": 0, "label": "z", "kind": "int", "bits": 64, "fvalue": 0}
+      ]
+    },
+    {
+      "label": "Asignación a x",
+      "line": -1,
+      "registers": {
+        "RAX": 1,
+        "RBX": 0,
+        "RCX": 0,
+        "RDX": 0,
+        "RSI": 0,
+        "RDI": 0,
+        "RBP": 0,
+        "RSP": -24,
+        "ZF": 0,
+        "SF": 0
+      },
+      "stack": [
+        {"offset": 0, "value": 0, "label": "RBP_OLD", "kind": "int", "bits": 64, "fvalue": 0},
+        {"offset": -8, "value": 1, "label": "x", "kind": "int", "bits": 64, "fvalue": 0},
+        {"offset": -16, "value": 0, "label": "y", "kind": "int", "bits": 64, "fvalue": 0},
+        {"offset": -24, "value": 0, "label": "z", "kind": "int", "bits": 64, "fvalue": 0}
+      ]
+    },
+    {
+      "label": "Asignación a y",
+      "line": -1,
+      "registers": {
+        "RAX": 10,
+        "RBX": 0,
+        "RCX": 0,
+        "RDX": 0,
+        "RSI": 0,
+        "RDI": 0,
+        "RBP": 0,
+        "RSP": -24,
+        "ZF": 0,
+        "SF": 0
+      },
+      "stack": [
+        {"offset": 0, "value": 0, "label": "RBP_OLD", "kind": "int", "bits": 64, "fvalue": 0},
+        {"offset": -8, "value": 1, "label": "x", "kind": "int", "bits": 64, "fvalue": 0},
+        {"offset": -16, "value": 10, "label": "y", "kind": "int", "bits": 64, "fvalue": 0},
+        {"offset": -24, "value": 0, "label": "z", "kind": "int", "bits": 64, "fvalue": 0}
+      ]
+    },
+    {
+      "label": "Asignación a z",
+      "line": -1,
+      "registers": {
+        "RAX": 1000000,
+        "RBX": 0,
+        "RCX": 0,
+        "RDX": 0,
+        "RSI": 0,
+        "RDI": 0,
+        "RBP": 0,
+        "RSP": -24,
+        "ZF": 0,
+        "SF": 0
+      },
+      "stack": [
+        {"offset": 0, "value": 0, "label": "RBP_OLD", "kind": "int", "bits": 64, "fvalue": 0},
+        {"offset": -8, "value": 1, "label": "x", "kind": "int", "bits": 64, "fvalue": 0},
+        {"offset": -16, "value": 10, "label": "y", "kind": "int", "bits": 64, "fvalue": 0},
+        {"offset": -24, "value": 1000000, "label": "z", "kind": "int", "bits": 64, "fvalue": 0}
+      ]
+    },
+    {
+      "label": "Después de println!",
+      "line": -1,
+      "registers": {
+        "RAX": 1,
+        "RBX": 0,
+        "RCX": 0,
+        "RDX": 0,
+        "RSI": 0,
+        "RDI": 0,
+        "RBP": 0,
+        "RSP": -24,
+        "ZF": 0,
+        "SF": 0
+      },
+      "stack": [
+        {"offset": 0, "value": 0, "label": "RBP_OLD", "kind": "int", "bits": 64, "fvalue": 0},
+        {"offset": -8, "value": 1, "label": "x", "kind": "int", "bits": 64, "fvalue": 0},
+        {"offset": -16, "value": 10, "label": "y", "kind": "int", "bits": 64, "fvalue": 0},
+        {"offset": -24, "value": 1000000, "label": "z", "kind": "int", "bits": 64, "fvalue": 0}
+      ]
+    },
+    {
+      "label": "Después de println!",
+      "line": -1,
+      "registers": {
+        "RAX": 10,
+        "RBX": 0,
+        "RCX": 0,
+        "RDX": 0,
+        "RSI": 0,
+        "RDI": 0,
+        "RBP": 0,
+        "RSP": -24,
+        "ZF": 0,
+        "SF": 0
+      },
+      "stack": [
+        {"offset": 0, "value": 0, "label": "RBP_OLD", "kind": "int", "bits": 64, "fvalue": 0},
+        {"offset": -8, "value": 1, "label": "x", "kind": "int", "bits": 64, "fvalue": 0},
+        {"offset": -16, "value": 10, "label": "y", "kind": "int", "bits": 64, "fvalue": 0},
+        {"offset": -24, "value": 1000000, "label": "z", "kind": "int", "bits": 64, "fvalue": 0}
+      ]
+    },
+    {
+      "label": "Después de println!",
+      "line": -1,
+      "registers": {
+        "RAX": 1000000,
+        "RBX": 0,
+        "RCX": 0,
+        "RDX": 0,
+        "RSI": 0,
+        "RDI": 0,
+        "RBP": 0,
+        "RSP": -24,
+        "ZF": 0,
+        "SF": 0
+      },
+      "stack": [
+        {"offset": 0, "value": 0, "label": "RBP_OLD", "kind": "int", "bits": 64, "fvalue": 0},
+        {"offset": -8, "value": 1, "label": "x", "kind": "int", "bits": 64, "fvalue": 0},
+        {"offset": -16, "value": 10, "label": "y", "kind": "int", "bits": 64, "fvalue": 0},
+        {"offset": -24, "value": 1000000, "label": "z", "kind": "int", "bits": 64, "fvalue": 0}
+      ]
+    }
+  ]
+}
