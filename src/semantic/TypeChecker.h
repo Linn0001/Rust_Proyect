@@ -45,7 +45,6 @@ public:
     virtual void visit(IfStm* stm) = 0;
     virtual void visit(WhileStm* stm) = 0;
 
-
     virtual void visit(PrintStm* stm) = 0;
     virtual void visit(AssignStm* stm) = 0;
     virtual void visit(ReturnStm* stm) = 0;
@@ -70,7 +69,7 @@ private:
     Environment<Type*> env;                  // Entorno de variables
     unordered_map<string, Type*> functions;  // Tipo de retorno de cada función
     unordered_map<string, vector<Type*>> functionArgs; // Tipos de argumentos
-    Type* currentFunctionReturnType;
+    Type* currentFunctionReturnType = nullptr;
 
     // Tipos básicos de Rust
     Type* t_bool;
@@ -86,7 +85,7 @@ private:
     Type* t_f64;
     Type* t_unit;   // equivalente a ()
 
-    // Registro de función (nombre → tipo retorno)
+    // Registro de función (nombre → tipo retorno + parámetros)
     void add_function(FunDec* fd);
 
 public:

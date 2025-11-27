@@ -16,6 +16,13 @@ void DebugVisitor::run(Program* p) {
     trace.regs.ZF  = 0;
     trace.regs.SF  = 0;
     lastValue = 0;
+    stopExecution = false;
+    functions.clear();
+
+    // Registrar todas las funciones
+    for (auto fd : p->fdlist) {
+        functions[fd->name] = fd;
+    }
 
     // Variables globales
     for (auto vd : p->vdlist) {
@@ -91,14 +98,19 @@ int DebugVisitor::visit(Program* p) {
 }
 
 int DebugVisitor::visit(FunDec* fd) {
+    // No ejecutamos funciones aquí; las llamamos desde FCallExp
     return 0;
 }
 
 int DebugVisitor::visit(Body* body) {
-    for (auto vd : body->decs)
+    for (auto vd : body->decs) {
         vd->accept(this);
-    for (auto s : body->stmlist)
+        if (stopExecution) return 0;
+    }
+    for (auto s : body->stmlist) {
         s->accept(this);
+        if (stopExecution) return 0;
+    }
     return 0;
 }
 
@@ -145,6 +157,7 @@ int DebugVisitor::visit(WhileStm* stm) {
 
         step("Iteración while, cond = " + to_string(cond));
         if (stm->b) stm->b->accept(this);
+        if (stopExecution) break;
     }
     trace.regs.RCX = 0;
     updateFlags(0);
@@ -172,6 +185,7 @@ int DebugVisitor::visit(ForStm* stm) {
 
         step("Iteración for " + stm->id + " = " + to_string(itVal));
         if (stm->b) stm->b->accept(this);
+        if (stopExecution) break;
 
         trace.setVar(stm->id, itVal + 1);
     }
@@ -182,6 +196,8 @@ int DebugVisitor::visit(ForStm* stm) {
 int DebugVisitor::visit(ReturnStm* r) {
     lastValue = eval(r->e);
     step("Return con valor " + to_string(lastValue));
+    // marcamos que ya no se ejecuten más statements en este cuerpo
+    stopExecution = true;
     return 0;
 }
 
@@ -231,8 +247,57 @@ int DebugVisitor::visit(BinaryExp* exp) {
     return 0;
 }
 
+// ===== LLAMADAS A FUNCIÓN (MODO AST) =====
+
 int DebugVisitor::visit(FCallExp* fcall) {
-    cerr << "[DEBUG] Llamadas a funciones de usuario aún no soportadas en DebugVisitor.\n";
-    lastValue = 0;
+    auto it = functions.find(fcall->name);
+    if (it == functions.end()) {
+        cerr << "[DEBUG] Llamada a función no declarada: " << fcall->name << "\n";
+        lastValue = 0;
+        return 0;
+    }
+
+    FunDec* fd = it->second;
+
+    // Guardar entorno del "caller"
+    auto savedVars       = trace.vars;
+    long long savedNext  = trace.nextOffset;
+    auto savedRegs       = trace.regs;
+    long long savedLast  = lastValue;
+    bool savedStop       = stopExecution;
+
+    // Reset de flag para ejecutar la función completa hasta su return
+    stopExecution = false;
+
+    // Pasar argumentos como nuevas variables (parámetros)
+    for (size_t i = 0; i < fd->pnames.size(); ++i) {
+        long long argVal = 0;
+        if (i < fcall->args.size())
+            argVal = eval(fcall->args[i]);
+
+        trace.declareVar(fd->pnames[i], argVal);
+    }
+
+    step("Entrada a función " + fd->name);
+
+    // Ejecutar cuerpo de la función
+    if (fd->b)
+        fd->b->accept(this);
+
+    long long result = lastValue;
+
+    step("Salida de función " + fd->name + " con retorno " + to_string(result));
+
+    // Restaurar entorno del caller
+    trace.vars       = savedVars;
+    trace.nextOffset = savedNext;
+    trace.regs       = savedRegs;
+    lastValue        = result;
+    stopExecution    = savedStop;
+
+    // Dejar el resultado en "RAX" lógico
+    trace.regs.RAX = result;
+    updateFlags(result);
+
     return 0;
 }

@@ -730,6 +730,7 @@ CMakeFiles/Rust_Project.dir/src/semantic/AsmInterpreter.cpp.o: /mnt/c/Users/ADMI
   /usr/include/c++/13/cerrno \
   /usr/include/c++/13/clocale \
   /usr/include/c++/13/cstddef \
+  /usr/include/c++/13/cstdint \
   /usr/include/c++/13/cstdio \
   /usr/include/c++/13/cstdlib \
   /usr/include/c++/13/cwchar \
@@ -775,6 +776,7 @@ CMakeFiles/Rust_Project.dir/src/semantic/AsmInterpreter.cpp.o: /mnt/c/Users/ADMI
   /usr/include/pthread.h \
   /usr/include/sched.h \
   /usr/include/stdc-predef.h \
+  /usr/include/stdint.h \
   /usr/include/stdio.h \
   /usr/include/stdlib.h \
   /usr/include/time.h \
@@ -799,6 +801,8 @@ CMakeFiles/Rust_Project.dir/src/semantic/AsmInterpreter.cpp.o: /mnt/c/Users/ADMI
   /usr/include/x86_64-linux-gnu/bits/select.h \
   /usr/include/x86_64-linux-gnu/bits/setjmp.h \
   /usr/include/x86_64-linux-gnu/bits/stdint-intn.h \
+  /usr/include/x86_64-linux-gnu/bits/stdint-least.h \
+  /usr/include/x86_64-linux-gnu/bits/stdint-uintn.h \
   /usr/include/x86_64-linux-gnu/bits/stdio_lim.h \
   /usr/include/x86_64-linux-gnu/bits/stdlib-float.h \
   /usr/include/x86_64-linux-gnu/bits/struct_mutex.h \
@@ -860,7 +864,8 @@ CMakeFiles/Rust_Project.dir/src/semantic/AsmInterpreter.cpp.o: /mnt/c/Users/ADMI
   /usr/include/x86_64-linux-gnu/sys/single_threaded.h \
   /usr/include/x86_64-linux-gnu/sys/types.h \
   /usr/lib/gcc/x86_64-linux-gnu/13/include/stdarg.h \
-  /usr/lib/gcc/x86_64-linux-gnu/13/include/stddef.h
+  /usr/lib/gcc/x86_64-linux-gnu/13/include/stddef.h \
+  /usr/lib/gcc/x86_64-linux-gnu/13/include/stdint.h
 
 CMakeFiles/Rust_Project.dir/src/semantic/DebugVisitor.cpp.o: /mnt/c/Users/ADMIN/Rust_Proyect/src/semantic/DebugVisitor.cpp \
   /mnt/c/Users/ADMIN/Rust_Proyect/src/semantic/DebugTrace.h \
@@ -1087,7 +1092,7 @@ CMakeFiles/Rust_Project.dir/src/semantic/DebugVisitor.cpp.o: /mnt/c/Users/ADMIN/
   /usr/lib/gcc/x86_64-linux-gnu/13/include/stddef.h
 
 CMakeFiles/Rust_Project.dir/src/semantic/TypeChecker.cpp.o: /mnt/c/Users/ADMIN/Rust_Proyect/src/semantic/TypeChecker.cpp \
-  /mnt/c/Users/ADMIN/Rust_Proyect/src/semantic/Typechecker.h \
+  /mnt/c/Users/ADMIN/Rust_Proyect/src/semantic/TypeChecker.h \
   /mnt/c/Users/ADMIN/Rust_Proyect/src/semantic/environment.h \
   /mnt/c/Users/ADMIN/Rust_Proyect/src/semantic/semantic_types.h \
   /mnt/c/Users/ADMIN/Rust_Proyect/src/syntactic/ast.h \
@@ -2225,8 +2230,6 @@ CMakeFiles/Rust_Project.dir/src/syntactic/parser.cpp.o: /mnt/c/Users/ADMIN/Rust_
 /usr/include/x86_64-linux-gnu/bits/uintn-identity.h:
 
 /usr/include/c++/13/bits/locale_facets_nonio.h:
-
-/mnt/c/Users/ADMIN/Rust_Proyect/src/semantic/Typechecker.h:
 
 /usr/include/c++/13/bits/fs_dir.h:
 

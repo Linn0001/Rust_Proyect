@@ -167,24 +167,10 @@ CMakeFiles/Rust_Project.dir/src/semantic/TypeChecker.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/Rust_Project.dir/src/semantic/TypeChecker.cpp.s"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /mnt/c/Users/ADMIN/Rust_Proyect/src/semantic/TypeChecker.cpp -o CMakeFiles/Rust_Project.dir/src/semantic/TypeChecker.cpp.s
 
-CMakeFiles/Rust_Project.dir/src/semantic/DebugVisitor.cpp.o: CMakeFiles/Rust_Project.dir/flags.make
-CMakeFiles/Rust_Project.dir/src/semantic/DebugVisitor.cpp.o: /mnt/c/Users/ADMIN/Rust_Proyect/src/semantic/DebugVisitor.cpp
-CMakeFiles/Rust_Project.dir/src/semantic/DebugVisitor.cpp.o: CMakeFiles/Rust_Project.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/mnt/c/Users/ADMIN/Rust_Proyect/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Building CXX object CMakeFiles/Rust_Project.dir/src/semantic/DebugVisitor.cpp.o"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/Rust_Project.dir/src/semantic/DebugVisitor.cpp.o -MF CMakeFiles/Rust_Project.dir/src/semantic/DebugVisitor.cpp.o.d -o CMakeFiles/Rust_Project.dir/src/semantic/DebugVisitor.cpp.o -c /mnt/c/Users/ADMIN/Rust_Proyect/src/semantic/DebugVisitor.cpp
-
-CMakeFiles/Rust_Project.dir/src/semantic/DebugVisitor.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/Rust_Project.dir/src/semantic/DebugVisitor.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /mnt/c/Users/ADMIN/Rust_Proyect/src/semantic/DebugVisitor.cpp > CMakeFiles/Rust_Project.dir/src/semantic/DebugVisitor.cpp.i
-
-CMakeFiles/Rust_Project.dir/src/semantic/DebugVisitor.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/Rust_Project.dir/src/semantic/DebugVisitor.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /mnt/c/Users/ADMIN/Rust_Proyect/src/semantic/DebugVisitor.cpp -o CMakeFiles/Rust_Project.dir/src/semantic/DebugVisitor.cpp.s
-
 CMakeFiles/Rust_Project.dir/src/semantic/AsmInterpreter.cpp.o: CMakeFiles/Rust_Project.dir/flags.make
 CMakeFiles/Rust_Project.dir/src/semantic/AsmInterpreter.cpp.o: /mnt/c/Users/ADMIN/Rust_Proyect/src/semantic/AsmInterpreter.cpp
 CMakeFiles/Rust_Project.dir/src/semantic/AsmInterpreter.cpp.o: CMakeFiles/Rust_Project.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/mnt/c/Users/ADMIN/Rust_Proyect/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Building CXX object CMakeFiles/Rust_Project.dir/src/semantic/AsmInterpreter.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/mnt/c/Users/ADMIN/Rust_Proyect/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Building CXX object CMakeFiles/Rust_Project.dir/src/semantic/AsmInterpreter.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/Rust_Project.dir/src/semantic/AsmInterpreter.cpp.o -MF CMakeFiles/Rust_Project.dir/src/semantic/AsmInterpreter.cpp.o.d -o CMakeFiles/Rust_Project.dir/src/semantic/AsmInterpreter.cpp.o -c /mnt/c/Users/ADMIN/Rust_Proyect/src/semantic/AsmInterpreter.cpp
 
 CMakeFiles/Rust_Project.dir/src/semantic/AsmInterpreter.cpp.i: cmake_force
@@ -195,6 +181,20 @@ CMakeFiles/Rust_Project.dir/src/semantic/AsmInterpreter.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/Rust_Project.dir/src/semantic/AsmInterpreter.cpp.s"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /mnt/c/Users/ADMIN/Rust_Proyect/src/semantic/AsmInterpreter.cpp -o CMakeFiles/Rust_Project.dir/src/semantic/AsmInterpreter.cpp.s
 
+CMakeFiles/Rust_Project.dir/src/semantic/DebugVisitor.cpp.o: CMakeFiles/Rust_Project.dir/flags.make
+CMakeFiles/Rust_Project.dir/src/semantic/DebugVisitor.cpp.o: /mnt/c/Users/ADMIN/Rust_Proyect/src/semantic/DebugVisitor.cpp
+CMakeFiles/Rust_Project.dir/src/semantic/DebugVisitor.cpp.o: CMakeFiles/Rust_Project.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/mnt/c/Users/ADMIN/Rust_Proyect/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Building CXX object CMakeFiles/Rust_Project.dir/src/semantic/DebugVisitor.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/Rust_Project.dir/src/semantic/DebugVisitor.cpp.o -MF CMakeFiles/Rust_Project.dir/src/semantic/DebugVisitor.cpp.o.d -o CMakeFiles/Rust_Project.dir/src/semantic/DebugVisitor.cpp.o -c /mnt/c/Users/ADMIN/Rust_Proyect/src/semantic/DebugVisitor.cpp
+
+CMakeFiles/Rust_Project.dir/src/semantic/DebugVisitor.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/Rust_Project.dir/src/semantic/DebugVisitor.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /mnt/c/Users/ADMIN/Rust_Proyect/src/semantic/DebugVisitor.cpp > CMakeFiles/Rust_Project.dir/src/semantic/DebugVisitor.cpp.i
+
+CMakeFiles/Rust_Project.dir/src/semantic/DebugVisitor.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/Rust_Project.dir/src/semantic/DebugVisitor.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /mnt/c/Users/ADMIN/Rust_Proyect/src/semantic/DebugVisitor.cpp -o CMakeFiles/Rust_Project.dir/src/semantic/DebugVisitor.cpp.s
+
 # Object files for target Rust_Project
 Rust_Project_OBJECTS = \
 "CMakeFiles/Rust_Project.dir/main.cpp.o" \
@@ -204,8 +204,8 @@ Rust_Project_OBJECTS = \
 "CMakeFiles/Rust_Project.dir/src/syntactic/ast.cpp.o" \
 "CMakeFiles/Rust_Project.dir/src/semantic/visitor.cpp.o" \
 "CMakeFiles/Rust_Project.dir/src/semantic/TypeChecker.cpp.o" \
-"CMakeFiles/Rust_Project.dir/src/semantic/DebugVisitor.cpp.o" \
-"CMakeFiles/Rust_Project.dir/src/semantic/AsmInterpreter.cpp.o"
+"CMakeFiles/Rust_Project.dir/src/semantic/AsmInterpreter.cpp.o" \
+"CMakeFiles/Rust_Project.dir/src/semantic/DebugVisitor.cpp.o"
 
 # External object files for target Rust_Project
 Rust_Project_EXTERNAL_OBJECTS =
@@ -217,8 +217,8 @@ Rust_Project: CMakeFiles/Rust_Project.dir/src/syntactic/parser.cpp.o
 Rust_Project: CMakeFiles/Rust_Project.dir/src/syntactic/ast.cpp.o
 Rust_Project: CMakeFiles/Rust_Project.dir/src/semantic/visitor.cpp.o
 Rust_Project: CMakeFiles/Rust_Project.dir/src/semantic/TypeChecker.cpp.o
-Rust_Project: CMakeFiles/Rust_Project.dir/src/semantic/DebugVisitor.cpp.o
 Rust_Project: CMakeFiles/Rust_Project.dir/src/semantic/AsmInterpreter.cpp.o
+Rust_Project: CMakeFiles/Rust_Project.dir/src/semantic/DebugVisitor.cpp.o
 Rust_Project: CMakeFiles/Rust_Project.dir/build.make
 Rust_Project: CMakeFiles/Rust_Project.dir/link.txt
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/mnt/c/Users/ADMIN/Rust_Proyect/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_10) "Linking CXX executable Rust_Project"

@@ -490,7 +490,7 @@ void AsmInterpreter::execute(const Instr& ins, int& ip) {
         ++ip;
     }
 
-    // Un paso por instrucción ejecutada
+    // Un paso por instrucción ejecutada-
     snapshot(ins);
 }
 

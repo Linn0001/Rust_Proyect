@@ -46,7 +46,7 @@ private:
     // pila de llamadas (return addresses)
     std::vector<int> callStack;
 
-    long long lastCmp    = 0;  // resultado dst - src
+    long long lastCmp    = 0;  // resultado dst - src-
     long long lastCmpLhs = 0;  // dst (para signed/unsigned)
     long long lastCmpRhs = 0;  // src
 

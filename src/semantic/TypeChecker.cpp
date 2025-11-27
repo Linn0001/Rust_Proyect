@@ -17,7 +17,6 @@ void WhileStm::accept(TypeVisitor* v) { v->visit(this); }
 void AssignStm::accept(TypeVisitor* v) { v->visit(this); }
 void PrintStm::accept(TypeVisitor* v) { v->visit(this); }
 void ReturnStm::accept(TypeVisitor* v) { v->visit(this); }
-
 void ForStm::accept(TypeVisitor* v) { v->visit(this); }
 
 void VarDec::accept(TypeVisitor* v) { v->visit(this); }
@@ -31,21 +30,23 @@ void Program::accept(TypeVisitor* v) { v->visit(this); }
 
 TypeChecker::TypeChecker() {
     t_bool = new Type(Type::BOOL);
-    t_i8 = new Type(Type::I8);
-    t_i16 = new Type(Type::I16);
-    t_i32 = new Type(Type::I32);
-    t_i64 = new Type(Type::I64);
-    t_u8 = new Type(Type::U8);
-    t_u16 = new Type(Type::U16);
-    t_u32 = new Type(Type::U32);
-    t_u64 = new Type(Type::U64);
-    t_f32 = new Type(Type::F32);
-    t_f64 = new Type(Type::F64);
+    t_i8   = new Type(Type::I8);
+    t_i16  = new Type(Type::I16);
+    t_i32  = new Type(Type::I32);
+    t_i64  = new Type(Type::I64);
+    t_u8   = new Type(Type::U8);
+    t_u16  = new Type(Type::U16);
+    t_u32  = new Type(Type::U32);
+    t_u64  = new Type(Type::U64);
+    t_f32  = new Type(Type::F32);
+    t_f64  = new Type(Type::F64);
     t_unit = new Type(Type::UNIT);
+
+    currentFunctionReturnType = t_unit;
 }
 
 // ===========================================================
-//   Registrar funciones globales
+//   Registrar funciones globales (tipo de retorno + args)
 // ===========================================================
 
 void TypeChecker::add_function(FunDec* fd) {
@@ -54,15 +55,27 @@ void TypeChecker::add_function(FunDec* fd) {
         exit(0);
     }
 
+    // Tipo de retorno
     Type* returnType = Type::from_string(fd->type);
-
     if (!returnType) {
         cerr << "Error: tipo de retorno no válido en función '"
              << fd->name << "' (" << fd->type << ")." << endl;
         exit(0);
     }
-
     functions[fd->name] = returnType;
+
+    // Tipos de parámetros
+    vector<Type*> args;
+    for (size_t i = 0; i < fd->ptypes.size(); ++i) {
+        Type* pt = Type::from_string(fd->ptypes[i]);
+        if (!pt) {
+            cerr << "Error: tipo de parámetro inválido en función '"
+                 << fd->name << "' (" << fd->ptypes[i] << ")." << endl;
+            exit(0);
+        }
+        args.push_back(pt);
+    }
+    functionArgs[fd->name] = args;
 }
 
 // ===========================================================
@@ -79,7 +92,7 @@ void TypeChecker::typecheck(Program* program) {
 // ===========================================================
 
 void TypeChecker::visit(Program* p) {
-    // Primero registrar funciones
+    // Primero registrar funciones (tipos)
     for (auto f : p->fdlist)
         add_function(f);
 
@@ -132,10 +145,12 @@ void TypeChecker::visit(FunDec* f) {
 
     env.add_level();
 
+    // Parámetros como variables en el entorno
     for (size_t i = 0; i < f->pnames.size(); ++i) {
         Type* pt = new Type();
         if (!pt->set_basic_type(f->ptypes[i])) {
-            cerr << "Error: tipo de parámetro inválido en función '" << f->name << "'." << endl;
+            cerr << "Error: tipo de parámetro inválido en función '"
+                 << f->name << "'." << endl;
             exit(0);
         }
         env.add_var(f->pnames[i], pt);
@@ -154,7 +169,6 @@ void TypeChecker::visit(FunDec* f) {
 // ===========================================================
 
 void TypeChecker::visit(IfStm* stm) {
-    // Verificar que la condición sea bool
     Type* condType = stm->cond->accept(this);
 
     if (!condType->match(t_bool)) {
@@ -162,18 +176,15 @@ void TypeChecker::visit(IfStm* stm) {
         exit(0);
     }
 
-    // Verificar bloque 'then'
     if (stm->then)
         stm->then->accept(this);
 
-    // Verificar bloque else si existe
     if (stm->els)
         stm->els->accept(this);
 }
 
 
 void TypeChecker::visit(WhileStm* stm) {
-    // Verificar que la condición sea bool
     Type* condType = stm->cond->accept(this);
 
     if (!condType->match(t_bool)) {
@@ -181,7 +192,6 @@ void TypeChecker::visit(WhileStm* stm) {
         exit(0);
     }
 
-    // Verificar el cuerpo del while
     if (stm->b)
         stm->b->accept(this);
 }
@@ -190,19 +200,18 @@ void TypeChecker::visit(WhileStm* stm) {
 void TypeChecker::visit(PrintStm* stm) {
     Type* t = stm->e->accept(this);
 
-    // Tipos permitidos en println (Rust simplificado)
     bool ok =
-        t->match(t_bool) ||
-        t->match(t_i8)  ||
-        t->match(t_i16) ||
-        t->match(t_i32) ||
-        t->match(t_i64) ||
-        t ->match(t_u8) ||
-        t ->match(t_u16)||
-        t ->match(t_u32)||
-        t ->match(t_u64)||
-        t->match(t_f32) ||
-        t->match(t_f64);
+            t->match(t_bool) ||
+            t->match(t_i8)  ||
+            t->match(t_i16) ||
+            t->match(t_i32) ||
+            t->match(t_i64) ||
+            t->match(t_u8)  ||
+            t->match(t_u16) ||
+            t->match(t_u32) ||
+            t->match(t_u64) ||
+            t->match(t_f32) ||
+            t->match(t_f64);
 
     if (!ok) {
         cerr << "Error: tipo inválido en println! (solo bool, enteros o floats)" << endl;
@@ -219,12 +228,11 @@ void TypeChecker::visit(AssignStm* stm) {
     Type* varType = env.lookup(stm->id);
     Type* expType = stm->e->accept(this);
 
-    // 1) Si son exactamente iguales
     if (varType->match(expType)) {
         return;
     }
 
-    // 2) Permitir asignaciones entre i32 e i64 en ambas direcciones
+    // Permitir i32 <-> i64
     if ((varType->ttype == Type::I64 && expType->ttype == Type::I32) ||
         (varType->ttype == Type::I32 && expType->ttype == Type::I64)) {
         return;
@@ -237,10 +245,8 @@ void TypeChecker::visit(AssignStm* stm) {
 
 
 void TypeChecker::visit(ReturnStm* stm) {
-    // Si no hay expresión, el return es equivalente a retornar unit
     Type* retType = (stm->e ? stm->e->accept(this) : t_unit);
 
-    // El tipo que la función actual debería devolver
     Type* expected = currentFunctionReturnType;
 
     if (!retType->match(expected)) {
@@ -284,7 +290,7 @@ Type* TypeChecker::visit(BinaryExp* e) {
                 cerr << "Error: operación aritmética requiere operandos numéricos.\n";
                 exit(0);
             }
-            resultType = left;  // Simplificación: usar tipo izquierdo
+            resultType = left;  // Simplificación
             break;
 
         case GT_OP:
@@ -295,19 +301,16 @@ Type* TypeChecker::visit(BinaryExp* e) {
                 cerr << "Error: comparación requiere operandos numéricos.\n";
                 exit(0);
             }
-            // aunque sean de distinto tamaño (i32 vs i64, por ejemplo).
             if (!(isInt(left) && isInt(right)) &&
                 !(isFloat(left) && isFloat(right))) {
                 cerr << "Error: comparación entre tipos incompatibles: "
                      << left->str() << " y " << right->str() << "\n";
                 exit(0);
             }
-
             resultType = t_bool;
             break;
 
         case EQ_OP:
-            // Igualdad: también permitimos ints entre sí o floats entre sí
             if (!(isInt(left) && isInt(right)) &&
                 !(isFloat(left) && isFloat(right))) {
                 cerr << "Error: comparación de igualdad requiere tipos compatibles.\n";
@@ -348,22 +351,54 @@ Type* TypeChecker::visit(IdExp* e) {
     }
     Type* t = env.lookup(e->val);
     e->type = t;
-    return env.lookup(e->val);
     return t;
 }
 
+// ====== LLAMADAS A FUNCIÓN ======
+
 Type* TypeChecker::visit(FCallExp* e) {
-    auto it = functions.find(e->name);
-    if (it == functions.end()) {
+    auto itRet = functions.find(e->name);
+    if (itRet == functions.end()) {
         cerr << "Error: llamada a función no declarada '" << e->name << "'." << endl;
         exit(0);
     }
-    e->type = it->second;
-    return it->second;
+
+    auto itArgs = functionArgs.find(e->name);
+    vector<Type*> params;
+    if (itArgs != functionArgs.end()) {
+        params = itArgs->second;
+    }
+
+    if (params.size() != e->args.size()) {
+        cerr << "Error: número de argumentos inválido en llamada a '"
+             << e->name << "'. Se esperaban " << params.size()
+             << " pero se recibieron " << e->args.size() << ".\n";
+        exit(0);
+    }
+
+    for (size_t i = 0; i < e->args.size(); ++i) {
+        Type* argT = e->args[i]->accept(this);
+        Type* parT = params[i];
+
+        if (argT->match(parT)) continue;
+
+        // permitimos i32 <-> i64 como antes
+        if ((argT->ttype == Type::I32 && parT->ttype == Type::I64) ||
+            (argT->ttype == Type::I64 && parT->ttype == Type::I32)) {
+            continue;
+        }
+
+        cerr << "Error: tipo de argumento " << (i+1) << " inválido en llamada a '"
+             << e->name << "'. Se esperaba " << parT->str()
+             << " pero se obtuvo " << argT->str() << ".\n";
+        exit(0);
+    }
+
+    e->type = itRet->second;
+    return itRet->second;
 }
 
 void TypeChecker::visit(ForStm* stm) {
-    // variable de iteración debe existir
     if (!env.check(stm->id)) {
         cerr << "Error: variable de iteración '" << stm->id
              << "' no declarada." << endl;
@@ -384,7 +419,6 @@ void TypeChecker::visit(ForStm* stm) {
         exit(0);
     }
 
-    // Cuerpo del for
     if (stm->b)
         stm->b->accept(this);
 }

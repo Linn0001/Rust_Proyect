@@ -4,11 +4,18 @@
 #include "visitor.h"
 #include "DebugTrace.h"
 #include <string>
+#include <unordered_map>
 
 class DebugVisitor : public Visitor {
 public:
     long long lastValue = 0;
     DebugTrace trace;
+
+    // Tabla de funciones: nombre -> nodo FunDec
+    std::unordered_map<std::string, FunDec*> functions;
+
+    // Flag para cortar ejecución de un Body después de un return
+    bool stopExecution = false;
 
     DebugVisitor() = default;
 
