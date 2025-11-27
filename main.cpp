@@ -127,7 +127,7 @@ int main(int argc, char* argv[]) {
             if (!interp.load(asmFile)) {
                 cerr << "[AsmDebug] No se pudo cargar el archivo ASM: " << asmFile << "\n";
             } else {
-                // ejecuta instrucción por instrucción hasta ret/fin
+                // ejecuta instrucción por instrucción hasta ret/fin-
                 interp.run();
 
                 string traceAsmFile = outputDir + "/" + baseName + "_trace_asm.json";
