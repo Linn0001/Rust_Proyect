@@ -25,6 +25,7 @@ int FunDec::accept(Visitor* visitor)        { return visitor->visit(this); }
 int Program::accept(Visitor* visitor)       { return visitor->visit(this); }
 int ReturnStm::accept(Visitor* visitor)     { return visitor->visit(this); }
 int ForStm::accept(Visitor *visitor)        { return visitor->visit(this); }
+int TernaryExp::accept(Visitor* visitor)    { return visitor->visit(this); }
 
 ///////////////////////////////////////////////////////////////////////////////////
 //                               GenCodeVisitor – Helpers-
@@ -136,12 +137,21 @@ int GenCodeVisitor::visit(NumberExp* exp) {
 }
 
 int GenCodeVisitor::visit(FloatExp* exp) {
-    // Cargar valor flotante a registro XMM
-    // Necesitamos ponerlo en memoria primero
-    out << " movq $" << *(long long*)&exp->val << ", %rax\n";
+    // Convertimos el double a sus bits enteros (64 bits)
+    union {
+        double d;
+        unsigned long long u;
+    } conv;
+    conv.d = exp->val;
+
+    // movabsq permite un inmediato de 64 bits completo a %rax
+    out << " movabsq $" << conv.u << ", %rax\n";
     out << " movq %rax, %xmm0\n";
+
     return 0;
 }
+
+
 
 int GenCodeVisitor::visit(BoolExp* exp) {
     out << " movq $" << (exp->val ? 1 : 0) << ", %rax\n";
@@ -201,93 +211,62 @@ int GenCodeVisitor::visit(AssignStm* stm) {
 }
 
 int GenCodeVisitor::visit(BinaryExp* exp) {
-    // Verificar si es operación con flotantes
     bool isFloat = (exp->left->type &&
                     (exp->left->type->ttype == Type::F32 ||
                      exp->left->type->ttype == Type::F64));
 
     if (isFloat) {
-        // Código para flotantes
+        // 1) Evaluar left → %rax (bits del double)
         exp->left->accept(this);
-        out << " movq %rax, %xmm0\n";
-        out << " pushq %rax\n";
+        out << " subq $16, %rsp\n";
+        out << " movq %rax, 8(%rsp)\n";   // guardar left en [rsp+8]
 
+        // 2) Evaluar right → %rax
         exp->right->accept(this);
-        out << " movq %rax, %xmm1\n";
-        out << " popq %rax\n";
+        out << " movq %rax, 0(%rsp)\n";   // guardar right en [rsp]
 
         switch (exp->op) {
-            // -------------------------
-            // Aritmética con flotantes
-            // -------------------------
-            case PLUS_OP:
-                out << " addsd %xmm1, %xmm0\n";
-                out << " movq %xmm0, %rax\n";
+            case PLUS_OP:  // left + right
+                out << " fldl 8(%rsp)\n";   // st0 = left
+                out << " fldl 0(%rsp)\n";   // st0 = right, st1 = left
+                out << " faddp %st, %st(1)\n"; // st0 = left + right
+                out << " fstpl 0(%rsp)\n";  // guardar resultado en [rsp]
                 break;
 
-            case MINUS_OP:
-                out << " subsd %xmm1, %xmm0\n";
-                out << " movq %xmm0, %rax\n";
+            case MINUS_OP: // left - right
+                out << " fldl 8(%rsp)\n";   // st0 = left
+                out << " fldl 0(%rsp)\n";   // st0 = right, st1 = left
+                out << " fsubp %st, %st(1)\n"; // st0 = left - right
+                out << " fstpl 0(%rsp)\n";
                 break;
 
-            case MUL_OP:
-                out << " mulsd %xmm1, %xmm0\n";
-                out << " movq %xmm0, %rax\n";
+            case MUL_OP:   // left * right
+                out << " fldl 8(%rsp)\n";   // st0 = left
+                out << " fldl 0(%rsp)\n";   // st0 = right, st1 = left
+                out << " fmulp %st, %st(1)\n"; // st0 = left * right
+                out << " fstpl 0(%rsp)\n";
                 break;
 
-            case DIV_OP:
-                out << " divsd %xmm1, %xmm0\n";
-                out << " movq %xmm0, %rax\n";
-                break;
-
-            // -------------------------
-            // Comparaciones con flotantes usando ucomisd
-            // -------------------------
-            // ucomisd compara dos doubles y setea flags:
-            // - ZF (Zero Flag): 1 si son iguales
-            // - PF (Parity Flag): 1 si alguno es NaN
-            // - CF (Carry Flag): 1 si %xmm0 < %xmm1
-
-            case GT_OP:  // %xmm0 > %xmm1
-                out << " ucomisd %xmm1, %xmm0\n";
-                out << " seta %al\n";           // Set if above (CF=0 and ZF=0)
-                out << " movzbq %al, %rax\n";   // Zero-extend al a rax
-                break;
-
-            case GE_OP:  // %xmm0 >= %xmm1
-                out << " ucomisd %xmm1, %xmm0\n";
-                out << " setae %al\n";          // Set if above or equal (CF=0)
-                out << " movzbq %al, %rax\n";
-                break;
-
-            case LT_OP:  // %xmm0 < %xmm1
-                // Para A < B, comparamos B con A y usamos seta (above)
-                out << " ucomisd %xmm0, %xmm1\n";  // Compara %xmm1 con %xmm0
-                out << " seta %al\n";              // Set if %xmm1 > %xmm0 (es decir, %xmm0 < %xmm1)
-                out << " movzbq %al, %rax\n";
-                break;
-
-            case LE_OP:  // %xmm0 <= %xmm1
-                // Para A <= B, comparamos B con A y usamos setae (above or equal)
-                out << " ucomisd %xmm0, %xmm1\n";  // Compara %xmm1 con %xmm0
-                out << " setae %al\n";             // Set if %xmm1 >= %xmm0 (es decir, %xmm0 <= %xmm1)
-                out << " movzbq %al, %rax\n";
-                break;
-
-            case EQ_OP:  // %xmm0 == %xmm1
-                out << " ucomisd %xmm1, %xmm0\n";
-                out << " sete %al\n";           // Set if equal (ZF=1)
-                out << " setnp %cl\n";          // Set if not parity (not NaN)
-                out << " andb %cl, %al\n";      // AND ambos (igual Y no-NaN)
-                out << " movzbq %al, %rax\n";
+            case DIV_OP:   // left / right
+                out << " fldl 8(%rsp)\n";   // st0 = left
+                out << " fldl 0(%rsp)\n";   // st0 = right, st1 = left
+                out << " fdivp %st, %st(1)\n"; // st0 = left / right
+                out << " fstpl 0(%rsp)\n";
                 break;
 
             default:
-                cerr << "Error: operador no soportado para flotantes.\n";
+                cerr << "Error: operador flotante no soportado (solo +, -, *, / por ahora)." << endl;
                 exit(1);
         }
-    } else {
-        // Código para enteros (el que ya tienes)
+
+        // 3) Cargar resultado a %rax (bits del double)
+        out << " movq 0(%rsp), %rax\n";
+        out << " addq $16, %rsp\n";
+
+        return 0;
+    }
+    else {
+        // ====== CAMINO PARA ENTEROS (tu código original) ======
         exp->left->accept(this);
         out << " pushq %rax\n";
         exp->right->accept(this);
@@ -344,7 +323,33 @@ int GenCodeVisitor::visit(BinaryExp* exp) {
                 out << " movzbq %al, %rax\n";
                 break;
         }
+        return 0;
     }
+}
+
+
+
+
+int GenCodeVisitor::visit(TernaryExp* e) {
+    int label = labelcont++;
+    string elseLabel = "tern_else_" + to_string(label);
+    string endLabel  = "tern_end_" + to_string(label);
+
+    // Evaluar la condición: resultado en %rax (0 = false, !=0 = true)
+    e->cond->accept(this);
+    out << " cmpq $0, %rax\n";
+    out << " je " << elseLabel << "\n";
+
+    // Rama then: deja el valor en %rax
+    e->thenExp->accept(this);
+    out << " jmp " << endLabel << "\n";
+
+    // Rama else
+    out << elseLabel << ":\n";
+    e->elseExp->accept(this);
+
+    // Fin: %rax contiene el resultado final
+    out << endLabel << ":\n";
 
     return 0;
 }
@@ -643,12 +648,14 @@ void GenCodeVisitor::loadValue(const string& location, int size, Type::TType tty
             } else {
                 out << " movzbq " << location << ", %rax\n"; // extensión cero para bool/u8
             }
+            break;
         case 2:  // i16, u16
             if (ttype == Type::I16) {
                 out << " movswq " << location << ", %rax\n";
             } else {
                 out << " movzwq " << location << ", %rax\n";
             }
+            break;
         case 4:  // i32, f32, u32
             // Para enteros con signo usar movslq
             if (ttype == Type::I32) {

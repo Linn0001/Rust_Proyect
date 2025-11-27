@@ -117,7 +117,7 @@ Token* Scanner::nextToken() {
 
     // OPERADORES Y SÍMBOLOS
     // Primero operadores DOBLES
-    if (strchr("+-*/(){},;:><=!.", c)) {
+    if (strchr("+-*/(){},;:><=!.?", c)) {
 
         // ====== OPERADORES DOBLES ======
 
@@ -174,6 +174,7 @@ Token* Scanner::nextToken() {
 
             case ',': token = new Token(Token::COMMA, c); break;
             case ';': token = new Token(Token::SEMICOL, c); break;
+            case '?': token = new Token(Token::QMARK, c); break;
 
             case ':': token = new Token(Token::COL, c); break;
         }
