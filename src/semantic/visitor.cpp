@@ -202,21 +202,33 @@ int GenCodeVisitor::visit(AssignStm* stm) {
 }
 
 int GenCodeVisitor::visit(BinaryExp* exp) {
-    // Verificar si es operación con flotantes
     bool isFloat = (exp->left->type &&
                     (exp->left->type->ttype == Type::F32 ||
                      exp->left->type->ttype == Type::F64));
 
     if (isFloat) {
-        // Código para flotantes
+        // ====== EVALUAR LEFT ======
+        // left -> %rax (por NumberExp/IdExp/FloatExp)
         exp->left->accept(this);
+        // Copiar bits de left a xmm0
         out << " movq %rax, %xmm0\n";
-        out << " pushq %rax\n";
+        // Guardar left (xmm0) en la pila
+        out << " subq $8, %rsp\n";
+        out << " movsd %xmm0, (%rsp)\n";
 
+        // ====== EVALUAR RIGHT ======
+        // right -> %rax
         exp->right->accept(this);
+        // Copiar bits de right a xmm1
         out << " movq %rax, %xmm1\n";
-        out << " popq %rax\n";
 
+        // ====== RESTAURAR LEFT A xmm0 ======
+        out << " movsd (%rsp), %xmm0\n";
+        out << " addq $8, %rsp\n";
+
+        // Ahora:
+        //  - left  en %xmm0
+        //  - right en %xmm1
         switch (exp->op) {
             // -------------------------
             // Aritmética con flotantes
@@ -242,44 +254,38 @@ int GenCodeVisitor::visit(BinaryExp* exp) {
                 break;
 
             // -------------------------
-            // Comparaciones con flotantes usando ucomisd
+            // Comparaciones con flotantes
+            // Queremos SIEMPRE comparar left vs right
             // -------------------------
-            // ucomisd compara dos doubles y setea flags:
-            // - ZF (Zero Flag): 1 si son iguales
-            // - PF (Parity Flag): 1 si alguno es NaN
-            // - CF (Carry Flag): 1 si %xmm0 < %xmm1
-
-            case GT_OP:  // %xmm0 > %xmm1
-                out << " ucomisd %xmm1, %xmm0\n";
-                out << " seta %al\n";           // Set if above (CF=0 and ZF=0)
-                out << " movzbq %al, %rax\n";   // Zero-extend al a rax
-                break;
-
-            case GE_OP:  // %xmm0 >= %xmm1
-                out << " ucomisd %xmm1, %xmm0\n";
-                out << " setae %al\n";          // Set if above or equal (CF=0)
+            case GT_OP:  // left > right
+                out << " ucomisd %xmm0, %xmm1\n";  // compara left con right
+                out << " seta %al\n";              // above (>)
                 out << " movzbq %al, %rax\n";
                 break;
 
-            case LT_OP:  // %xmm0 < %xmm1
-                // Para A < B, comparamos B con A y usamos seta (above)
-                out << " ucomisd %xmm0, %xmm1\n";  // Compara %xmm1 con %xmm0
-                out << " seta %al\n";              // Set if %xmm1 > %xmm0 (es decir, %xmm0 < %xmm1)
+            case GE_OP:  // left >= right
+                out << " ucomisd %xmm0, %xmm1\n";
+                out << " setae %al\n";             // above or equal (>=)
                 out << " movzbq %al, %rax\n";
                 break;
 
-            case LE_OP:  // %xmm0 <= %xmm1
-                // Para A <= B, comparamos B con A y usamos setae (above or equal)
-                out << " ucomisd %xmm0, %xmm1\n";  // Compara %xmm1 con %xmm0
-                out << " setae %al\n";             // Set if %xmm1 >= %xmm0 (es decir, %xmm0 <= %xmm1)
+            case LT_OP:  // left < right
+                out << " ucomisd %xmm0, %xmm1\n";
+                out << " setb %al\n";              // below (<)
                 out << " movzbq %al, %rax\n";
                 break;
 
-            case EQ_OP:  // %xmm0 == %xmm1
-                out << " ucomisd %xmm1, %xmm0\n";
-                out << " sete %al\n";           // Set if equal (ZF=1)
-                out << " setnp %cl\n";          // Set if not parity (not NaN)
-                out << " andb %cl, %al\n";      // AND ambos (igual Y no-NaN)
+            case LE_OP:  // left <= right
+                out << " ucomisd %xmm0, %xmm1\n";
+                out << " setbe %al\n";             // below or equal (<=)
+                out << " movzbq %al, %rax\n";
+                break;
+
+            case EQ_OP:  // left == right, y no NaN
+                out << " ucomisd %xmm0, %xmm1\n";
+                out << " sete %al\n";              // iguales
+                out << " setnp %cl\n";             // no NaN
+                out << " andb %cl, %al\n";
                 out << " movzbq %al, %rax\n";
                 break;
 
@@ -288,7 +294,7 @@ int GenCodeVisitor::visit(BinaryExp* exp) {
                 exit(1);
         }
     } else {
-        // Código para enteros (el que ya tienes)
+        // ====== tu código de enteros tal cual ======
         exp->left->accept(this);
         out << " pushq %rax\n";
         exp->right->accept(this);
@@ -349,6 +355,7 @@ int GenCodeVisitor::visit(BinaryExp* exp) {
 
     return 0;
 }
+
 
 int GenCodeVisitor::visit(TernaryExp* e) {
     int label = labelcont++;
