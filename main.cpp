@@ -137,7 +137,7 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        // Liberar AST y parser
+        // Liberar AST y parser-
         delete prog;
         delete parser;
         delete parserScanner;

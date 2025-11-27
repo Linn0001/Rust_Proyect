@@ -48,7 +48,7 @@ private:
 
     long long lastCmp    = 0;  // resultado dst - src-
     long long lastCmpLhs = 0;  // dst (para signed/unsigned)
-    long long lastCmpRhs = 0;  // src
+    long long lastCmpRhs = 0;
 
     static std::string trim(const std::string& s);
     static void splitOp(const std::string& line,

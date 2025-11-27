@@ -7,7 +7,7 @@
 using namespace std;
 
 // =============================
-// Métodos de la clase Parser
+// Métodos de la clase Parser-
 // =============================
 
 Parser::Parser(Scanner* sc) : scanner(sc) {

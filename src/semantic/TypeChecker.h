@@ -100,7 +100,7 @@ public:
     void visit(VarDec* v) override;
     void visit(FunDec* f) override;
 
-    // --- Sentencias ---
+    // --- Sentencias ----
     void visit(IfStm* stm) override;
     void visit(WhileStm* stm) override;
     void visit(ForStm* stm) override;

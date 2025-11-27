@@ -20,7 +20,7 @@ string Exp::binopToChar(BinaryOp op) {
     }
 }
 
-//                     BinaryExp
+//                     BinaryExp-
 BinaryExp::BinaryExp(Exp* l, Exp* r, BinaryOp o)
     : left(l), right(r), op(o) {}
 

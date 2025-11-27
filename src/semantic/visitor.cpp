@@ -27,7 +27,7 @@ int ReturnStm::accept(Visitor* visitor)     { return visitor->visit(this); }
 int ForStm::accept(Visitor *visitor)        { return visitor->visit(this); }
 
 ///////////////////////////////////////////////////////////////////////////////////
-//                               GenCodeVisitor – Helpers
+//                               GenCodeVisitor – Helpers-
 ///////////////////////////////////////////////////////////////////////////////////
 
 int GenCodeVisitor::generar(Program* program) {

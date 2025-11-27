@@ -6,7 +6,7 @@
 
 class Parser {
 private:
-    Scanner* scanner;       // Puntero al escáner, de donde se leen los tokens
+    Scanner* scanner;       // Puntero al escáner, de donde se leen los tokens-
     Token *current, *previous; // Punteros al token actual y al anterior
     bool match(Token::Type ttype);   // Verifica si el token actual coincide con un tipo esperado y avanza si es así
     bool check(Token::Type ttype);   // Comprueba si el token actual es de cierto tipo, sin avanzar

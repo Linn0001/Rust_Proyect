@@ -117,7 +117,7 @@ public:
         steps.push_back(std::move(s));
     }
 
-    // =========================-
+    // =========================
     // Escribir trace en JSON
     // =========================
     void writeJson(const std::string& path) const {

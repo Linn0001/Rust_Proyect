@@ -504,7 +504,7 @@ void AsmInterpreter::run() {
     lastCmpLhs = 0;
     lastCmpRhs = 0;
 
-    // Punto de entrada: intentar empezar en "main"
+
     int ip = 0;
     auto it = labelToIndex.find("main");
     if (it != labelToIndex.end()) {

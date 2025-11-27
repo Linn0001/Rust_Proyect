@@ -354,7 +354,7 @@ Type* TypeChecker::visit(IdExp* e) {
     return t;
 }
 
-// ====== LLAMADAS A FUNCIÓN ======
+// ====== LLAMADAS A FUNCIÓN ======.
 
 Type* TypeChecker::visit(FCallExp* e) {
     auto itRet = functions.find(e->name);

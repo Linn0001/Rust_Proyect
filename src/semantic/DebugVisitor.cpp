@@ -288,7 +288,7 @@ int DebugVisitor::visit(FCallExp* fcall) {
 
     step("Salida de función " + fd->name + " con retorno " + to_string(result));
 
-    // Restaurar entorno del caller
+    // Restaurar entorno del caller-
     trace.vars       = savedVars;
     trace.nextOffset = savedNext;
     trace.regs       = savedRegs;

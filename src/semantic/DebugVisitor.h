@@ -27,7 +27,7 @@ public:
 
     void updateFlags(long long val);
 
-    // Visitor impl
+    // Visitor impl-
     int visit(Program* p) override;
     int visit(FunDec* fd) override;
     int visit(Body* body) override;
