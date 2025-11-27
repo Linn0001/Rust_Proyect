@@ -30,7 +30,8 @@ BinaryExp::~BinaryExp() {
 }
 
 //                     NumberExp
-NumberExp::NumberExp(int v) : val(v) {}
+NumberExp::NumberExp(long long v) : val(v) {}   // antes: int v
+
 
 NumberExp::~NumberExp() {}
 
@@ -78,6 +79,14 @@ WhileStm::WhileStm(Exp* c, Body* t)
     : cond(c), b(t) {}
 
 WhileStm::~WhileStm() {}
+
+//                     ForStm
+ForStm::ForStm(string id, Exp* s, Exp* e, Body* b)
+        : id(id), start(s), end(e), b(b) {}
+
+ForStm::~ForStm(){}
+
+
 
 //                     ExpAsStm
 // ExpAsStm::ExpAsStm(Exp *e) : e(e) {}

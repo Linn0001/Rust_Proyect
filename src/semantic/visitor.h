@@ -24,6 +24,9 @@ class FCallExp;
 class ReturnStm;
 class FunDec;
 
+class ForStm;
+
+
 class Visitor {
 public:
     virtual int visit(BinaryExp* exp) = 0;
@@ -41,6 +44,9 @@ public:
     virtual int visit(FCallExp* fcall) = 0;
     virtual int visit(ReturnStm* r) = 0;
     virtual int visit(FunDec* fd) = 0;
+
+    virtual int visit(ForStm* stm) = 0;
+
 };
 
 class GenCodeVisitor : public Visitor {
@@ -84,6 +90,8 @@ public:
     int visit(FCallExp* fcall) override;
     int visit(ReturnStm* r) override;
     int visit(FunDec* fd) override;
+    int visit(ForStm* stm) override;
+
 };
 
 #endif //RUST_PROJECT_VISITOR_H
