@@ -190,13 +190,16 @@ Stm* Parser::parseStm() {
 
         return new PrintStm(e);
     }
-    // return(expr);
+    // return expr;
     else if (match(Token::RETURN)) {
         ReturnStm* r  = new ReturnStm();
 
-        match(Token::LPAREN);
-        r->e = parseCE();
-        match(Token::RPAREN);
+        // Si no es directamente un ';', parseamos una expresión completa (con ternaria, etc.)
+        if (!check(Token::SEMICOL)) {
+            r->e = parseCE();
+        } else {
+            r->e = nullptr;  // por si algún día usas "return;"
+        }
 
         return r;
     }
@@ -230,26 +233,21 @@ Stm* Parser::parseStm() {
     }
     // for i in 0..10 { ... }
     else if (match(Token::FOR)) {
-        // for <id> in <expr> .. <expr> { Body }
         string itVar;
 
-        // for i ...
         if (!match(Token::ID)) {
             cout << "Error: se esperaba un identificador después de 'for'." << endl;
             exit(1);
         }
         itVar = previous->text;
 
-        // for i in ...
         if (!match(Token::IN)) {
             cout << "Error: se esperaba 'in' en el encabezado del for." << endl;
             exit(1);
         }
 
-        // for i in <expr> ..
         Exp* start = parseCE();
 
-        // for i in <expr> .. <expr>
         if (!match(Token::RANGE)) {
             cout << "Error: se esperaba '..' en el encabezado del for." << endl;
             exit(1);
@@ -257,7 +255,6 @@ Stm* Parser::parseStm() {
 
         Exp* end = parseCE();
 
-        // for i in a..b {
         if (!match(Token::LBRACE)) {
             cout << "Error: se esperaba '{' después del encabezado de for." << endl;
             exit(1);
@@ -270,7 +267,6 @@ Stm* Parser::parseStm() {
             exit(1);
         }
 
-        // Asumiendo que definiste ForStm(string, Exp*, Exp*, Body*)
         a = new ForStm(itVar, start, end, body);
     }
     // while cond { ... }
@@ -300,18 +296,12 @@ Stm* Parser::parseStm() {
 
 
 
+
     Exp* Parser::parseCE() {
+        // Primero parseamos la parte "normal" (sumas, productos, etc.)
         Exp* l = parseBE();
 
-        // Ternaria: cond ? expr1 : expr2
-        if (match(Token::QMARK)) {
-            Exp* thenExp = parseCE();   // o parseBE(), pero así permites anidación
-            match(Token::COL);
-            Exp* elseExp = parseCE();
-            return new TernaryExp(l, thenExp, elseExp);
-        }
-
-        // Si no hay '?', seguimos con las comparaciones normales
+        // Comparaciones: >, >=, <, <=, ==
         if (match(Token::GT)) {
             BinaryOp op = GT_OP;
             Exp* r = parseBE();
@@ -338,8 +328,17 @@ Stm* Parser::parseStm() {
             l = new BinaryExp(l, r, op);
         }
 
+        // 👇 IMPORTANTE: el operador ternario se chequea DESPUÉS de las comparaciones
+        if (match(Token::QMARK)) {
+            Exp* thenExp = parseCE();   // permitimos ternarias anidadas
+            match(Token::COL);
+            Exp* elseExp = parseCE();
+            return new TernaryExp(l, thenExp, elseExp);
+        }
+
         return l;
     }
+
 
 
 

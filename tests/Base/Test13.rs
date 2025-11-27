@@ -1,10 +1,11 @@
+fn max(a: i32, b: i32) -> i32 {
+    return (a > b) ? a : b;
+}
+
 fn main() {
-    let a: i32 = 10;
-    let b: i32 = 20;
+    let x: i32 = 15;
+    let y: i32 = 9;
+    let m: i32 = max(x, y);
 
-    let max: i32 = (a > b) ? a : b;
-    let min: i32 = (a > b) ? b : a;
-
-    println!("{}", max);
-    println!("{}", min);
+    println!("{}", m);
 }
