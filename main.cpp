@@ -9,6 +9,9 @@
 #include "src/syntactic/ast.h"
 #include "src/semantic/TypeChecker.h"
 #include "src/semantic/visitor.h"
+#include "src/semantic/DebugVisitor.h"
+#include "src/semantic/DebugTrace.h"
+#include "src/semantic/AsmInterpreter.h"
 
 using namespace std;
 namespace fs = std::filesystem;
@@ -30,62 +33,43 @@ string loadFile(const string& filename) {
 
 // Obtener nombre base del archivo sin extensión
 string getBaseName(const string& filepath) {
-    size_t lastSlash = filepath.find_last_of("/\\");
-    size_t lastDot = filepath.find_last_of(".");
-
-    string filename;
-    if (lastSlash != string::npos) {
-        filename = filepath.substr(lastSlash + 1);
-    } else {
-        filename = filepath;
-    }
-
-    if (lastDot != string::npos) {
-        size_t start = (lastSlash != string::npos) ? lastSlash + 1 : 0;
-        return filename.substr(0, lastDot - start);
-    }
-
-    return filename;
+    fs::path p(filepath);
+    return p.stem().string(); // p.ej. "Test4.rs" -> "Test4"
 }
 
 int main(int argc, char* argv[]) {
 
     if (argc < 2) {
-        cout << "Uso: ./Rust_Project <archivo.rs>" << endl;
+        cout << "Uso: ./Rust_Project <archivo.rs> [--debug]" << endl;
         return 1;
     }
 
     string inputFile = argv[1];
+    bool debugMode   = (argc >= 3 && string(argv[2]) == "--debug");
+
     string code = loadFile(inputFile);
 
     cout << "=== Código fuente cargado ===\n\n";
     cout << code << "\n\n";
 
-    // ----------------------------
-    // 1. Ejecutar el SCANNER
-    // ----------------------------
+    // 1. SCANNER
     cout << "=== Ejecutando SCANNER ===\n";
 
     Scanner scanner(code.c_str());
     ejecutar_scanner(&scanner, inputFile);
 
-    // ----------------------------
-    // 2. Ejecutar el PARSER
-    // ----------------------------
+    // 2. PARSER
     cout << "\n=== Ejecutando PARSER ===\n";
 
     try {
-        // IMPORTANTE: un parser necesita un scanner nuevo
         Scanner* parserScanner = new Scanner(code.c_str());
-        Parser* parser = new Parser(parserScanner);
+        Parser*  parser        = new Parser(parserScanner);
 
         Program* prog = parser->parseProgram();
 
         cout << "\n>>> Parser exitoso\n";
 
-        // ----------------------------
-        // 3. Ejecutar TYPECHECKER
-        // ----------------------------
+        // 3. TYPECHECKER
         cout << "\n=== Ejecutando TYPECHECKER ===\n";
 
         TypeChecker tc;
@@ -93,22 +77,30 @@ int main(int argc, char* argv[]) {
 
         cout << "\n>>> Typechecking exitoso\n";
 
-        // ----------------------------
-        // 4. Ejecutar CODEGEN
-        // ----------------------------
-        cout << "\n=== Ejecutando CODEGEN ===\n";
-
-        // Crear directorio output si no existe
+        // Carpeta output + nombre base
         string outputDir = "output";
         if (!fs::exists(outputDir)) {
             fs::create_directory(outputDir);
         }
+        string baseName  = getBaseName(inputFile);
 
-        // Generar nombre del archivo assembly
-        string baseName = getBaseName(inputFile);
+        // 3.5 (opcional) DEBUGGER a nivel AST
+        if (debugMode) {
+            cout << "\n=== Ejecutando DEBUGGER AST (DebugVisitor) ===\n";
+
+            DebugVisitor debugger;
+            debugger.run(prog);
+
+            string traceAstFile = outputDir + "/" + baseName + "_trace_ast.json";
+            debugger.trace.writeJson(traceAstFile);
+            cout << "\n>>> Trace AST generado en: " << traceAstFile << "\n";
+        }
+
+        // 4. CODEGEN -> genera el .s
+        cout << "\n=== Ejecutando CODEGEN ===\n";
+
         string asmFile = outputDir + "/" + baseName + ".s";
 
-        // Abrir archivo de salida
         ofstream asmOut(asmFile);
         if (!asmOut.is_open()) {
             cerr << "Error: no se pudo crear el archivo " << asmFile << endl;
@@ -118,7 +110,6 @@ int main(int argc, char* argv[]) {
             return 1;
         }
 
-        // Generar código assembly
         GenCodeVisitor codegen(asmOut);
         codegen.generar(prog);
         asmOut.close();
@@ -126,6 +117,27 @@ int main(int argc, char* argv[]) {
         cout << "\n>>> Generación de código exitosa\n";
         cout << "    Assembly generado en: " << asmFile << "\n";
 
+        // 5. DEBUGGER opcional a nivel ASM (mini-emulador x86-64)
+        if (debugMode) {
+            cout << "\n=== Ejecutando INTÉRPRETE DE ASM (mini-emulador x86-64) ===\n";
+
+            DebugTrace asmTrace;
+            AsmInterpreter interp(asmTrace);
+
+            if (!interp.load(asmFile)) {
+                cerr << "[AsmDebug] No se pudo cargar el archivo ASM: " << asmFile << "\n";
+            } else {
+                // ejecuta instrucción por instrucción hasta ret/fin-
+                interp.run();
+
+                string traceAsmFile = outputDir + "/" + baseName + "_trace_asm.json";
+                asmTrace.writeJson(traceAsmFile);
+                cout << "\n>>> Trace ASM generado en: " << traceAsmFile << "\n";
+                cout << "    (Cada step corresponde a una instrucción y tiene 'line' del .s)\n";
+            }
+        }
+
+        // Liberar AST y parser-
         delete prog;
         delete parser;
         delete parserScanner;

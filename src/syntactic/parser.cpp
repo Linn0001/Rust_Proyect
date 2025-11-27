@@ -7,7 +7,7 @@
 using namespace std;
 
 // =============================
-// Métodos de la clase Parser
+// Métodos de la clase Parser-
 // =============================
 
 Parser::Parser(Scanner* sc) : scanner(sc) {
@@ -68,9 +68,9 @@ Program* Parser::parseProgram() {
     if (check(Token::FN)) {
         p->fdlist.push_back(parseFunDec());
         while (check(Token::FN)) {
-                p->fdlist.push_back(parseFunDec());
-            }
+            p->fdlist.push_back(parseFunDec());
         }
+    }
     cout << "Parser exitoso" << endl;
 
     return p;
@@ -180,7 +180,7 @@ Stm* Parser::parseStm() {
 
         return new AssignStm(var, e);
     }
-    // println!("...", expr);
+        // println!("...", expr);
     else if (match(Token::PRINTLN)) {
         match(Token::LPAREN);
         match(Token::STRING);
@@ -190,7 +190,7 @@ Stm* Parser::parseStm() {
 
         return new PrintStm(e);
     }
-    // return expr;
+        // return expr;
     else if (match(Token::RETURN)) {
         ReturnStm* r  = new ReturnStm();
 
@@ -203,7 +203,7 @@ Stm* Parser::parseStm() {
 
         return r;
     }
-    // if cond { ... } [else { ... }]
+        // if cond { ... } [else { ... }]
     else if (match(Token::IF)) {
         e = parseCE();
 
@@ -231,7 +231,7 @@ Stm* Parser::parseStm() {
 
         a = new IfStm(e, tb, fb);
     }
-    // for i in 0..10 { ... }
+        // for i in 0..10 { ... }
     else if (match(Token::FOR)) {
         string itVar;
 
@@ -269,7 +269,7 @@ Stm* Parser::parseStm() {
 
         a = new ForStm(itVar, start, end, body);
     }
-    // while cond { ... }
+        // while cond { ... }
     else if (match(Token::WHILE)) {
         e = parseCE();
 
@@ -297,152 +297,152 @@ Stm* Parser::parseStm() {
 
 
 
-    Exp* Parser::parseCE() {
-        // Primero parseamos la parte "normal" (sumas, productos, etc.)
-        Exp* l = parseBE();
+Exp* Parser::parseCE() {
+    // Primero parseamos la parte "normal" (sumas, productos, etc.)
+    Exp* l = parseBE();
 
-        // Comparaciones: >, >=, <, <=, ==
-        if (match(Token::GT)) {
-            BinaryOp op = GT_OP;
-            Exp* r = parseBE();
-            l = new BinaryExp(l, r, op);
-        }
-        else if (match(Token::GE)) {
-            BinaryOp op = GE_OP;
-            Exp* r = parseBE();
-            l = new BinaryExp(l, r, op);
-        }
-        else if (match(Token::LT)) {
-            BinaryOp op = LT_OP;
-            Exp* r = parseBE();
-            l = new BinaryExp(l, r, op);
-        }
-        else if (match(Token::LE)) {
-            BinaryOp op = LE_OP;
-            Exp* r = parseBE();
-            l = new BinaryExp(l, r, op);
-        }
-        else if (match(Token::EQ)) {
-            BinaryOp op = EQ_OP;
-            Exp* r = parseBE();
-            l = new BinaryExp(l, r, op);
-        }
-
-        // 👇 IMPORTANTE: el operador ternario se chequea DESPUÉS de las comparaciones
-        if (match(Token::QMARK)) {
-            Exp* thenExp = parseCE();   // permitimos ternarias anidadas
-            match(Token::COL);
-            Exp* elseExp = parseCE();
-            return new TernaryExp(l, thenExp, elseExp);
-        }
-
-        return l;
+    // Comparaciones: >, >=, <, <=, ==
+    if (match(Token::GT)) {
+        BinaryOp op = GT_OP;
+        Exp* r = parseBE();
+        l = new BinaryExp(l, r, op);
+    }
+    else if (match(Token::GE)) {
+        BinaryOp op = GE_OP;
+        Exp* r = parseBE();
+        l = new BinaryExp(l, r, op);
+    }
+    else if (match(Token::LT)) {
+        BinaryOp op = LT_OP;
+        Exp* r = parseBE();
+        l = new BinaryExp(l, r, op);
+    }
+    else if (match(Token::LE)) {
+        BinaryOp op = LE_OP;
+        Exp* r = parseBE();
+        l = new BinaryExp(l, r, op);
+    }
+    else if (match(Token::EQ)) {
+        BinaryOp op = EQ_OP;
+        Exp* r = parseBE();
+        l = new BinaryExp(l, r, op);
     }
 
-
-
-
-    Exp* Parser::parseBE() {
-        Exp* l = parseE();
-
-        while (match(Token::PLUS) || match(Token::MINUS)) {
-            BinaryOp op;
-
-            if (previous->type == Token::PLUS){
-                op = PLUS_OP;
-            }
-            else {
-                op = MINUS_OP;
-            }
-
-            Exp* r = parseE();
-
-            l = new BinaryExp(l, r, op);
-        }
-
-        return l;
+    // 👇 IMPORTANTE: el operador ternario se chequea DESPUÉS de las comparaciones
+    if (match(Token::QMARK)) {
+        Exp* thenExp = parseCE();   // permitimos ternarias anidadas
+        match(Token::COL);
+        Exp* elseExp = parseCE();
+        return new TernaryExp(l, thenExp, elseExp);
     }
 
-
-    Exp* Parser::parseE() {
-        Exp* l = parseF();
-
-        while (match(Token::MUL) || match(Token::DIV)) {
-            BinaryOp op;
-
-            if (previous->type == Token::MUL){
-                op = MUL_OP;
-            }
-            else {
-                op = DIV_OP;
-            }
-
-            Exp* r = parseF();
-
-            l = new BinaryExp(l, r, op);
-        }
-
-        return l;
-    }
+    return l;
+}
 
 
-    // Exp* Parser::parseT() {
-    //     Exp* l = parseF();
-    //
-    //     if (match(Token::POW)) {
-    //         BinaryOp op = POW_OP;
-    //         Exp* r = parseF();
-    //         l = new BinaryExp(l, r, op);
-    //     }
-    //     return l;
-    // }
 
-    Exp* Parser::parseF() {
-        Exp* e;
-        string nom;
 
-        if (match(Token::NUM)) {
-            return new NumberExp(stoll(previous->text));
-        }
-        else if (match(Token::FLOAT)) {
-            return new FloatExp(stod(previous->text));
-        }
-        else if (match(Token::TRUE)) {
-            return new BoolExp(true);
-        }
-        else if (match(Token::FALSE)) {
-            return new BoolExp(false);
-        }
-        else if (match(Token::LPAREN)) {
-            e = parseCE();
-            match(Token::RPAREN);
+Exp* Parser::parseBE() {
+    Exp* l = parseE();
 
-            return e;
-        }
-        else if (match(Token::ID)) {
-            nom = previous->text;
+    while (match(Token::PLUS) || match(Token::MINUS)) {
+        BinaryOp op;
 
-            if (check(Token::LPAREN)) {
-                match(Token::LPAREN);
-
-                FCallExp* fcall = new FCallExp();
-
-                fcall->name = nom;
-
-                if (!check(Token::RPAREN)) {
-                    fcall->args.push_back(parseCE());
-                    while(match(Token::COMMA)) {
-                        fcall->args.push_back(parseCE());
-                    }
-                }
-                match(Token::RPAREN);
-                return fcall;
-            }
-            else {
-                return new IdExp(nom);
-            }
+        if (previous->type == Token::PLUS){
+            op = PLUS_OP;
         }
         else {
-            throw runtime_error("Error sintáctico");
+            op = MINUS_OP;
         }
+
+        Exp* r = parseE();
+
+        l = new BinaryExp(l, r, op);
+    }
+
+    return l;
+}
+
+
+Exp* Parser::parseE() {
+    Exp* l = parseF();
+
+    while (match(Token::MUL) || match(Token::DIV)) {
+        BinaryOp op;
+
+        if (previous->type == Token::MUL){
+            op = MUL_OP;
+        }
+        else {
+            op = DIV_OP;
+        }
+
+        Exp* r = parseF();
+
+        l = new BinaryExp(l, r, op);
+    }
+
+    return l;
+}
+
+
+// Exp* Parser::parseT() {
+//     Exp* l = parseF();
+//
+//     if (match(Token::POW)) {
+//         BinaryOp op = POW_OP;
+//         Exp* r = parseF();
+//         l = new BinaryExp(l, r, op);
+//     }
+//     return l;
+// }
+
+Exp* Parser::parseF() {
+    Exp* e;
+    string nom;
+
+    if (match(Token::NUM)) {
+        return new NumberExp(stoll(previous->text));
+    }
+    else if (match(Token::FLOAT)) {
+        return new FloatExp(stod(previous->text));
+    }
+    else if (match(Token::TRUE)) {
+        return new BoolExp(true);
+    }
+    else if (match(Token::FALSE)) {
+        return new BoolExp(false);
+    }
+    else if (match(Token::LPAREN)) {
+        e = parseCE();
+        match(Token::RPAREN);
+
+        return e;
+    }
+    else if (match(Token::ID)) {
+        nom = previous->text;
+
+        if (check(Token::LPAREN)) {
+            match(Token::LPAREN);
+
+            FCallExp* fcall = new FCallExp();
+
+            fcall->name = nom;
+
+            if (!check(Token::RPAREN)) {
+                fcall->args.push_back(parseCE());
+                while(match(Token::COMMA)) {
+                    fcall->args.push_back(parseCE());
+                }
+            }
+            match(Token::RPAREN);
+            return fcall;
+        }
+        else {
+            return new IdExp(nom);
+        }
+    }
+    else {
+        throw runtime_error("Error sintáctico");
+    }
 }

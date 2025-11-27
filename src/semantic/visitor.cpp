@@ -11,7 +11,7 @@ using namespace std;
 
 int BinaryExp::accept(Visitor* visitor)     { return visitor->visit(this); }
 int NumberExp::accept(Visitor* visitor)     { return visitor->visit(this); }
-int FloatExp::accept(Visitor* visitor)     { return visitor->visit(this); }
+int FloatExp::accept(Visitor* visitor)      { return visitor->visit(this); }
 int BoolExp::accept(Visitor* visitor)       { return visitor->visit(this); }
 int IdExp::accept(Visitor* visitor)         { return visitor->visit(this); }
 int PrintStm::accept(Visitor* visitor)      { return visitor->visit(this); }
@@ -48,7 +48,7 @@ int GenCodeVisitor::visit(Program* program) {
     out << "print_fmt_bool_true: .string \"true\\n\"\n";
     out << "print_fmt_bool_false: .string \"false\\n\"\n";
 
-    // Variables globales con tamaño correcto
+    // Variables globales
     for (auto dec : program->vdlist) {
         dec->accept(this);
     }
@@ -70,7 +70,7 @@ int GenCodeVisitor::visit(Program* program) {
 
     out << "\n.text\n";
 
-    // Declaraciones de funciones
+    // Funciones
     for (auto dec : program->fdlist)
         dec->accept(this);
 
@@ -85,7 +85,6 @@ int GenCodeVisitor::visit(Program* program) {
 int GenCodeVisitor::visit(VarDec* stm) {
     string var = stm->name;
 
-    // Asegurar que el tipo está resuelto
     if (!stm->resolved) {
         stm->resolved = Type::from_string(stm->type);
         if (!stm->resolved) {
@@ -96,29 +95,24 @@ int GenCodeVisitor::visit(VarDec* stm) {
 
     Type* t = stm->resolved;
 
-    // Global o local
     if (!entornoFuncion) {
+        // Global
         globalMemory[var] = {true, t};
-    }
-    else {
-        // Las variables locales ya tienen espacio reservado en visit(FunDec)
-        // Solo las registramos en localTypes si no están ya
+    } else {
+        // Local
         if (localTypes.find(var) == localTypes.end()) {
             localTypes[var] = t;
         }
     }
 
-    // Inicializar la variable si tiene expresión de inicialización
+    // Inicialización
     if (!stm->name.empty() && stm->e != nullptr) {
-        stm->e->accept(this);   // valor queda en %rax
+        stm->e->accept(this);   // valor en %rax (o bits del double)
 
         if (!entornoFuncion) {
-            // Variable global
             int size = Type::sizeof_type(t->ttype);
             storeValue(var + "(%rip)", size, t->ttype);
-        }
-        else {
-            // Variable local
+        } else {
             int size = Type::sizeof_type(t->ttype);
             storeValue(to_string(memory[var]) + "(%rbp)", size, t->ttype);
         }
@@ -137,21 +131,16 @@ int GenCodeVisitor::visit(NumberExp* exp) {
 }
 
 int GenCodeVisitor::visit(FloatExp* exp) {
-    // Convertimos el double a sus bits enteros (64 bits)
     union {
         double d;
         unsigned long long u;
     } conv;
     conv.d = exp->val;
 
-    // movabsq permite un inmediato de 64 bits completo a %rax
     out << " movabsq $" << conv.u << ", %rax\n";
     out << " movq %rax, %xmm0\n";
-
     return 0;
 }
-
-
 
 int GenCodeVisitor::visit(BoolExp* exp) {
     out << " movq $" << (exp->val ? 1 : 0) << ", %rax\n";
@@ -162,7 +151,6 @@ int GenCodeVisitor::visit(IdExp* exp) {
     Type* t = nullptr;
     int size = 8;
 
-    // Buscar el tipo de la variable
     if (globalMemory.count(exp->val)) {
         t = globalMemory[exp->val].second;
         size = Type::sizeof_type(t->ttype);
@@ -182,7 +170,7 @@ int GenCodeVisitor::visit(IdExp* exp) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
-//                           GenCodeVisitor – Statements
+//                           GenCodeVisitor – Assign
 ///////////////////////////////////////////////////////////////////////////////////
 
 int GenCodeVisitor::visit(AssignStm* stm) {
@@ -191,7 +179,6 @@ int GenCodeVisitor::visit(AssignStm* stm) {
     Type* t = nullptr;
     int size = 8;
 
-    // Buscar el tipo de la variable
     if (globalMemory.count(stm->id)) {
         t = globalMemory[stm->id].second;
         size = Type::sizeof_type(t->ttype);
@@ -210,145 +197,232 @@ int GenCodeVisitor::visit(AssignStm* stm) {
     return 0;
 }
 
-int GenCodeVisitor::visit(BinaryExp* exp) {
-    bool isFloat = (exp->left->type &&
-                    (exp->left->type->ttype == Type::F32 ||
-                     exp->left->type->ttype == Type::F64));
+///////////////////////////////////////////////////////////////////////////////////
+//                   GenCodeVisitor – BinaryExp (CORREGIDO FLOAT)
+///////////////////////////////////////////////////////////////////////////////////
 
-    if (isFloat) {
-        // 1) Evaluar left → %rax (bits del double)
+int GenCodeVisitor::visit(BinaryExp* exp) {
+    auto isFloatType = [](Type* t) {
+        return t && (t->ttype == Type::F32 || t->ttype == Type::F64);
+    };
+
+    bool opIsArith =
+            (exp->op == PLUS_OP ||
+             exp->op == MINUS_OP ||
+             exp->op == MUL_OP  ||
+             exp->op == DIV_OP);
+
+    bool opIsCmp =
+            (exp->op == GT_OP ||
+             exp->op == GE_OP ||
+             exp->op == LT_OP ||
+             exp->op == LE_OP ||
+             exp->op == EQ_OP);
+
+    bool leftIsFloat  = false;
+    bool rightIsFloat = false;
+
+    // 1) Si son literales float
+    if (dynamic_cast<FloatExp*>(exp->left))  leftIsFloat  = true;
+    if (dynamic_cast<FloatExp*>(exp->right)) rightIsFloat = true;
+
+    // 2) Si son IdExp, consulta localTypes/globalMemory para ver si son f32/f64
+    if (auto idL = dynamic_cast<IdExp*>(exp->left)) {
+        auto itL = localTypes.find(idL->val);
+        if (itL != localTypes.end() && isFloatType(itL->second))
+            leftIsFloat = true;
+
+        auto itLg = globalMemory.find(idL->val);
+        if (itLg != globalMemory.end() && isFloatType(itLg->second.second))
+            leftIsFloat = true;
+    }
+
+    if (auto idR = dynamic_cast<IdExp*>(exp->right)) {
+        auto itR = localTypes.find(idR->val);
+        if (itR != localTypes.end() && isFloatType(itR->second))
+            rightIsFloat = true;
+
+        auto itRg = globalMemory.find(idR->val);
+        if (itRg != globalMemory.end() && isFloatType(itRg->second.second))
+            rightIsFloat = true;
+    }
+
+    bool isFloatOp      = (leftIsFloat || rightIsFloat);
+    bool isFloatArith   = isFloatOp && opIsArith;
+    bool isFloatCompare = isFloatOp && opIsCmp;
+
+    // ============================================================
+    // 1) ARITMÉTICA DE FLOTANTES (+ - * /)  – ya venías usando x87
+    // ============================================================
+    if (isFloatArith) {
+        // left → bits double en %rax
         exp->left->accept(this);
         out << " subq $16, %rsp\n";
-        out << " movq %rax, 8(%rsp)\n";   // guardar left en [rsp+8]
+        out << " movq %rax, 8(%rsp)\n";   // left
 
-        // 2) Evaluar right → %rax
+        // right → bits double en %rax
         exp->right->accept(this);
-        out << " movq %rax, 0(%rsp)\n";   // guardar right en [rsp]
-
-        switch (exp->op) {
-            case PLUS_OP:  // left + right
-                out << " fldl 8(%rsp)\n";   // st0 = left
-                out << " fldl 0(%rsp)\n";   // st0 = right, st1 = left
-                out << " faddp %st, %st(1)\n"; // st0 = left + right
-                out << " fstpl 0(%rsp)\n";  // guardar resultado en [rsp]
-                break;
-
-            case MINUS_OP: // left - right
-                out << " fldl 8(%rsp)\n";   // st0 = left
-                out << " fldl 0(%rsp)\n";   // st0 = right, st1 = left
-                out << " fsubp %st, %st(1)\n"; // st0 = left - right
-                out << " fstpl 0(%rsp)\n";
-                break;
-
-            case MUL_OP:   // left * right
-                out << " fldl 8(%rsp)\n";   // st0 = left
-                out << " fldl 0(%rsp)\n";   // st0 = right, st1 = left
-                out << " fmulp %st, %st(1)\n"; // st0 = left * right
-                out << " fstpl 0(%rsp)\n";
-                break;
-
-            case DIV_OP:   // left / right
-                out << " fldl 8(%rsp)\n";   // st0 = left
-                out << " fldl 0(%rsp)\n";   // st0 = right, st1 = left
-                out << " fdivp %st, %st(1)\n"; // st0 = left / right
-                out << " fstpl 0(%rsp)\n";
-                break;
-
-            default:
-                cerr << "Error: operador flotante no soportado (solo +, -, *, / por ahora)." << endl;
-                exit(1);
-        }
-
-        // 3) Cargar resultado a %rax (bits del double)
-        out << " movq 0(%rsp), %rax\n";
-        out << " addq $16, %rsp\n";
-
-        return 0;
-    }
-    else {
-        // ====== CAMINO PARA ENTEROS (tu código original) ======
-        exp->left->accept(this);
-        out << " pushq %rax\n";
-        exp->right->accept(this);
-        out << " movq %rax, %rcx\n";
-        out << " popq %rax\n";
+        out << " movq %rax, 0(%rsp)\n";   // right
 
         switch (exp->op) {
             case PLUS_OP:
-                out << " addq %rcx, %rax\n";
+                out << " fldl 8(%rsp)\n";
+                out << " fldl 0(%rsp)\n";
+                out << " faddp %st, %st(1)\n";
+                out << " fstpl 0(%rsp)\n";
                 break;
             case MINUS_OP:
-                out << " subq %rcx, %rax\n";
+                out << " fldl 8(%rsp)\n";
+                out << " fldl 0(%rsp)\n";
+                out << " fsubp %st, %st(1)\n";
+                out << " fstpl 0(%rsp)\n";
                 break;
             case MUL_OP:
-                out << " imulq %rcx, %rax\n";
+                out << " fldl 8(%rsp)\n";
+                out << " fldl 0(%rsp)\n";
+                out << " fmulp %st, %st(1)\n";
+                out << " fstpl 0(%rsp)\n";
                 break;
             case DIV_OP:
-                out << " cqto\n";
-                out << " idivq %rcx\n";
+                out << " fldl 8(%rsp)\n";
+                out << " fldl 0(%rsp)\n";
+                out << " fdivp %st, %st(1)\n";
+                out << " fstpl 0(%rsp)\n";
                 break;
-
-            case GT_OP:
-                out << " cmpq %rcx, %rax\n";
-                out << " movl $0, %eax\n";
-                out << " setg %al\n";
-                out << " movzbq %al, %rax\n";
-                break;
-
-            case GE_OP:
-                out << " cmpq %rcx, %rax\n";
-                out << " movl $0, %eax\n";
-                out << " setge %al\n";
-                out << " movzbq %al, %rax\n";
-                break;
-
-            case LT_OP:
-                out << " cmpq %rcx, %rax\n";
-                out << " movl $0, %eax\n";
-                out << " setl %al\n";
-                out << " movzbq %al, %rax\n";
-                break;
-
-            case LE_OP:
-                out << " cmpq %rcx, %rax\n";
-                out << " movl $0, %eax\n";
-                out << " setle %al\n";
-                out << " movzbq %al, %rax\n";
-                break;
-
-            case EQ_OP:
-                out << " cmpq %rcx, %rax\n";
-                out << " movl $0, %eax\n";
-                out << " sete %al\n";
-                out << " movzbq %al, %rax\n";
-                break;
+            default:
+                cerr << "Error: operador flotante no soportado en aritmética.\n";
+                exit(1);
         }
+
+        // Resultado en %rax (bits del double) y en %xmm0 (para printf)
+        out << " movq 0(%rsp), %rax\n";
+        out << " movq %rax, %xmm0\n";
+        out << " addq $16, %rsp\n";
         return 0;
     }
+
+    // ============================================================
+    // 2) COMPARACIONES DE FLOTANTES (>, >=, <, <=, ==)
+    //    Devuelve bool en %rax (0 o 1)
+    // ============================================================
+    if (isFloatCompare) {
+        // Evaluamos left → bits en %rax, lo movemos a %xmm0
+        exp->left->accept(this);
+        out << " movq %rax, %xmm0\n";
+
+        // Evaluamos right → bits en %rax, lo movemos a %xmm1
+        exp->right->accept(this);
+        out << " movq %rax, %xmm1\n";
+
+        // ucomisd xmm1, xmm0  ; compara xmm0 (left) con xmm1 (right)
+        out << " ucomisd %xmm1, %xmm0\n";
+        out << " movl $0, %eax\n";
+
+        switch (exp->op) {
+            case GT_OP:  // left > right
+                out << " seta %al\n";   // CF=0 && ZF=0
+                break;
+            case GE_OP:  // left >= right
+                out << " setae %al\n";  // CF=0
+                break;
+            case LT_OP:  // left < right
+                out << " setb %al\n";   // CF=1
+                break;
+            case LE_OP:  // left <= right
+                out << " setbe %al\n";  // CF=1 || ZF=1
+                break;
+            case EQ_OP:  // left == right
+                out << " sete %al\n";   // ZF=1
+                break;
+            default:
+                cerr << "Error: operador de comparación flotante no soportado.\n";
+                exit(1);
+        }
+
+        out << " movzbq %al, %rax\n";   // bool 0/1 en %rax
+        return 0;
+    }
+
+    // ============================================================
+    // 3) CAMINO ENTERO / BOOL ORIGINAL (lo dejamos tal cual)
+    // ============================================================
+    exp->left->accept(this);
+    out << " pushq %rax\n";
+    exp->right->accept(this);
+    out << " movq %rax, %rcx\n";
+    out << " popq %rax\n";
+
+    switch (exp->op) {
+        case PLUS_OP:
+            out << " addq %rcx, %rax\n";
+            break;
+        case MINUS_OP:
+            out << " subq %rcx, %rax\n";
+            break;
+        case MUL_OP:
+            out << " imulq %rcx, %rax\n";
+            break;
+        case DIV_OP:
+            out << " cqto\n";
+            out << " idivq %rcx\n";
+            break;
+
+        case GT_OP:
+            out << " cmpq %rcx, %rax\n";
+            out << " movl $0, %eax\n";
+            out << " setg %al\n";
+            out << " movzbq %al, %rax\n";
+            break;
+        case GE_OP:
+            out << " cmpq %rcx, %rax\n";
+            out << " movl $0, %eax\n";
+            out << " setge %al\n";
+            out << " movzbq %al, %rax\n";
+            break;
+        case LT_OP:
+            out << " cmpq %rcx, %rax\n";
+            out << " movl $0, %eax\n";
+            out << " setl %al\n";
+            out << " movzbq %al, %rax\n";
+            break;
+        case LE_OP:
+            out << " cmpq %rcx, %rax\n";
+            out << " movl $0, %eax\n";
+            out << " setle %al\n";
+            out << " movzbq %al, %rax\n";
+            break;
+        case EQ_OP:
+            out << " cmpq %rcx, %rax\n";
+            out << " movl $0, %eax\n";
+            out << " sete %al\n";
+            out << " movzbq %al, %rax\n";
+            break;
+    }
+
+    return 0;
 }
 
 
-
+///////////////////////////////////////////////////////////////////////////////////
+//                           Ternary, Print, Body, If, While, Return, For, FunDec, FCall
+//      (igual que tenías, solo los dejo como estaban)
+///////////////////////////////////////////////////////////////////////////////////
 
 int GenCodeVisitor::visit(TernaryExp* e) {
     int label = labelcont++;
     string elseLabel = "tern_else_" + to_string(label);
     string endLabel  = "tern_end_" + to_string(label);
 
-    // Evaluar la condición: resultado en %rax (0 = false, !=0 = true)
     e->cond->accept(this);
     out << " cmpq $0, %rax\n";
     out << " je " << elseLabel << "\n";
 
-    // Rama then: deja el valor en %rax
     e->thenExp->accept(this);
     out << " jmp " << endLabel << "\n";
 
-    // Rama else
     out << elseLabel << ":\n";
     e->elseExp->accept(this);
 
-    // Fin: %rax contiene el resultado final
     out << endLabel << ":\n";
 
     return 0;
@@ -357,16 +431,13 @@ int GenCodeVisitor::visit(TernaryExp* e) {
 int GenCodeVisitor::visit(PrintStm* stm) {
     stm->e->accept(this);
 
-    // Detectar el tipo de la expresión
     if (stm->e->type) {
         if (stm->e->type->ttype == Type::F32 || stm->e->type->ttype == Type::F64) {
-            // Imprimir flotante
             out << " movq %rax, %xmm0\n";
             out << " leaq print_fmt_float(%rip), %rdi\n";
-            out << " movl $1, %eax\n";  // 1 registro XMM usado
+            out << " movl $1, %eax\n";
             out << " call printf\n";
         } else if (stm->e->type->ttype == Type::BOOL) {
-            // Imprimir booleano
             int label = labelcont++;
             out << " cmpq $0, %rax\n";
             out << " je .print_false_" << label << "\n";
@@ -378,21 +449,18 @@ int GenCodeVisitor::visit(PrintStm* stm) {
             out << " movl $0, %eax\n";
             out << " call printf\n";
         } else if (stm->e->type->ttype == Type::U8 || stm->e->type->ttype == Type::U16 ||
-               stm->e->type->ttype == Type::U32 || stm->e->type->ttype == Type::U64) {
-            // Imprimir entero sin signo
+                   stm->e->type->ttype == Type::U32 || stm->e->type->ttype == Type::U64) {
             out << " movq %rax, %rsi\n";
             out << " leaq print_fmt_uint(%rip), %rdi\n";
             out << " movl $0, %eax\n";
             out << " call printf\n";
         } else {
-            // Imprimir entero
             out << " movq %rax, %rsi\n";
             out << " leaq print_fmt_int(%rip), %rdi\n";
             out << " movl $0, %eax\n";
             out << " call printf\n";
         }
     } else {
-        // Fallback: asumir entero
         out << " movq %rax, %rsi\n";
         out << " leaq print_fmt_int(%rip), %rdi\n";
         out << " movl $0, %eax\n";
@@ -402,6 +470,7 @@ int GenCodeVisitor::visit(PrintStm* stm) {
     return 0;
 }
 
+// Body
 int GenCodeVisitor::visit(Body* b) {
     for (auto dec : b->decs)
         dec->accept(this);
@@ -412,6 +481,7 @@ int GenCodeVisitor::visit(Body* b) {
     return 0;
 }
 
+// If
 int GenCodeVisitor::visit(IfStm* stm) {
     int label = labelcont++;
 
@@ -429,6 +499,7 @@ int GenCodeVisitor::visit(IfStm* stm) {
     return 0;
 }
 
+// While
 int GenCodeVisitor::visit(WhileStm* stm) {
     int label = labelcont++;
 
@@ -445,16 +516,15 @@ int GenCodeVisitor::visit(WhileStm* stm) {
     return 0;
 }
 
+// Return
 int GenCodeVisitor::visit(ReturnStm* stm) {
     stm->e->accept(this);
     out << " jmp .end_" << nombreFuncion << "\n";
     return 0;
 }
 
+// For
 int GenCodeVisitor::visit(ForStm* stm) {
-    // for i in start..end { body }
-    // Requiere que la variable 'i' ya exista como global o local.
-
     Type* t = nullptr;
     int size = 8;
     string var = stm->id;
@@ -476,7 +546,7 @@ int GenCodeVisitor::visit(ForStm* stm) {
     }
 
     // i = start;
-    stm->start->accept(this);  // deja inicio en %rax
+    stm->start->accept(this);
     if (isGlobal) {
         storeValue(var + "(%rip)", size, t->ttype);
     } else {
@@ -487,22 +557,19 @@ int GenCodeVisitor::visit(ForStm* stm) {
 
     out << "for_" << label << ":\n";
 
-    // Cargar i en %rcx
+    // i → %rcx
     if (isGlobal) {
-        loadValue(var + "(%rip)", size, t->ttype); // -> %rax
+        loadValue(var + "(%rip)", size, t->ttype);
     } else {
         loadValue(to_string(offsetVar) + "(%rbp)", size, t->ttype);
     }
     out << " movq %rax, %rcx\n";
 
-    // Evaluar end en %rax
-    stm->end->accept(this);   // %rax = end
-
-    // while (i < end)
+    // end → %rax
+    stm->end->accept(this);
     out << " cmpq %rax, %rcx\n";
     out << " jge endfor_" << label << "\n";
 
-    // Cuerpo del for
     stm->b->accept(this);
 
     // i = i + 1
@@ -521,14 +588,10 @@ int GenCodeVisitor::visit(ForStm* stm) {
 
     out << " jmp for_" << label << "\n";
     out << "endfor_" << label << ":\n";
-
     return 0;
 }
 
-///////////////////////////////////////////////////////////////////////////////////
-//                           GenCodeVisitor – Funciones y Calls
-///////////////////////////////////////////////////////////////////////////////////
-
+// FunDec
 int GenCodeVisitor::visit(FunDec* f) {
     entornoFuncion = true;
     memory.clear();
@@ -536,37 +599,35 @@ int GenCodeVisitor::visit(FunDec* f) {
     offset = -8;
     nombreFuncion = f->name;
 
-    // Registros de parámetros según System V ABI (Linux/Unix)
     vector<string> argRegs = {"%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"};
 
-    // Setup
     out << ".globl " << f->name << "\n";
     out << f->name << ":\n";
     out << " pushq %rbp\n";
     out << " movq %rsp, %rbp\n";
 
-    // ===== ARGUMENTOS =====
-    // Los argumentos se guardan primero con 8 bytes cada uno
+    // =========================
+    // PARÁMETROS
+    // =========================
     for (int i = 0; i < (int)f->pnames.size(); ++i) {
         Type* paramType = Type::from_string(f->ptypes[i]);
         if (!paramType) {
             cerr << "Error: tipo de parámetro inválido: " << f->ptypes[i] << endl;
             exit(1);
         }
-
         memory[f->pnames[i]] = offset;
         localTypes[f->pnames[i]] = paramType;
         out << " movq " << argRegs[i] << ", " << offset << "(%rbp)\n";
         offset -= 8;
     }
 
-    // ===== VARIABLES LOCALES CON TAMAÑO DINÁMICO =====
+    // =========================
+    // LOCALES (RESERVA OFFSET)
+    // =========================
     for (auto dec : f->b->decs) {
-        // Asegurarse de que el tipo está resuelto
         if (!dec->resolved) {
             dec->resolved = Type::from_string(dec->type);
         }
-
         if (!dec->resolved) {
             cerr << "Error: tipo inválido para variable local '" << dec->name << "'" << endl;
             exit(1);
@@ -575,46 +636,55 @@ int GenCodeVisitor::visit(FunDec* f) {
         Type* t = dec->resolved;
         localTypes[dec->name] = t;
 
-        // Obtener tamaño y alineación del tipo
-        int size = Type::sizeof_type(t->ttype);
+        int size  = Type::sizeof_type(t->ttype);
         int align = Type::alignof_type(t->ttype);
 
-        // Validar que el tipo sea válido
         if (size <= 0 || align <= 0) {
             cerr << "Error: tipo inválido para variable '" << dec->name << "'" << endl;
             exit(1);
         }
 
-        // Alinear el offset según el requerimiento del tipo
         int alignMask = align - 1;
         offset = (offset - size) & ~alignMask;
 
-        // Guardar la posición de esta variable
         memory[dec->name] = offset;
     }
 
-    // Calcular espacio total necesario (debe ser múltiplo de 16 para ABI x86-64)
+    // Tamaño total de stack para esta función
     int stackSpace = (-offset);
     if (stackSpace % 16 != 0) {
         stackSpace = ((stackSpace + 15) / 16) * 16;
     }
 
-    // Reservar espacio en el stack para las variables locales
     if (stackSpace > 0) {
         out << " subq $" << stackSpace << ", %rsp\n";
     }
 
-    // ===== INICIALIZAR VARIABLES LOCALES =====
+    // =========================
+    // TABLA DE DEBUG PARA VARIABLES LOCALES
+    // =========================
+    // Formato:  # DEBUG_VAR <nombre> <offset>
+    // El AsmInterpreter leerá estas líneas y sabrá que offset -> nombre.
+    out << " # DEBUG_VARS_BEGIN\n";
+    for (const auto& [name, off] : memory) {
+        out << " # DEBUG_VAR " << name << " " << off << "\n";
+    }
+    out << " # DEBUG_VARS_END\n";
+
+    // =========================
+    // INICIALIZAR LOCALES
+    // =========================
     for (auto dec : f->b->decs) {
         dec->accept(this);
     }
 
-    // ===== EJECUTAR CUERPO DE LA FUNCIÓN =====
+    // =========================
+    // CUERPO
+    // =========================
     for (auto s : f->b->stmlist) {
         s->accept(this);
     }
 
-    // ===== EPÍLOGO =====
     out << ".end_" << f->name << ":\n";
     out << " leave\n";
     out << " ret\n";
@@ -623,8 +693,9 @@ int GenCodeVisitor::visit(FunDec* f) {
     return 0;
 }
 
+
+// FCallExp
 int GenCodeVisitor::visit(FCallExp* exp) {
-    // Registros de argumentos según System V ABI (Linux/Unix)
     vector<string> argRegs = {"%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"};
 
     for (int i = 0; i < (int)exp->args.size(); ++i) {
@@ -637,34 +708,33 @@ int GenCodeVisitor::visit(FCallExp* exp) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
-//                           FUNCIONES AUXILIARES
+//                           FUNCIONES AUXILIARES load/store
 ///////////////////////////////////////////////////////////////////////////////////
 
 void GenCodeVisitor::loadValue(const string& location, int size, Type::TType ttype) {
     switch(size) {
-        case 1:  // i8, u8, bool
+        case 1:
             if (ttype == Type::I8) {
-                out << " movsbq " << location << ", %rax\n"; // extensión con signo
+                out << " movsbq " << location << ", %rax\n";
             } else {
-                out << " movzbq " << location << ", %rax\n"; // extensión cero para bool/u8
+                out << " movzbq " << location << ", %rax\n";
             }
             break;
-        case 2:  // i16, u16
+        case 2:
             if (ttype == Type::I16) {
                 out << " movswq " << location << ", %rax\n";
             } else {
                 out << " movzwq " << location << ", %rax\n";
             }
             break;
-        case 4:  // i32, f32, u32
-            // Para enteros con signo usar movslq
+        case 4:
             if (ttype == Type::I32) {
                 out << " movslq " << location << ", %rax\n";
             } else {
                 out << " movl " << location << ", %eax\n";
             }
             break;
-        case 8:  // i64, f64, u64
+        case 8:
             out << " movq " << location << ", %rax\n";
             break;
         default:
@@ -673,18 +743,18 @@ void GenCodeVisitor::loadValue(const string& location, int size, Type::TType tty
     }
 }
 
-void GenCodeVisitor::storeValue(const string& location, int size, Type::TType ttype) {
+void GenCodeVisitor::storeValue(const string& location, int size, Type::TType) {
     switch(size) {
-        case 1:  // i8, bool
+        case 1:
             out << " movb %al, " << location << "\n";
             break;
-        case 2:  // i16
+        case 2:
             out << " movw %ax, " << location << "\n";
             break;
-        case 4:  // i32, f32
+        case 4:
             out << " movl %eax, " << location << "\n";
             break;
-        case 8:  // i64, f64
+        case 8:
             out << " movq %rax, " << location << "\n";
             break;
         default:

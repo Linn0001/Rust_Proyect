@@ -20,9 +20,9 @@ string Exp::binopToChar(BinaryOp op) {
     }
 }
 
-//                     BinaryExp
+//                     BinaryExp-
 BinaryExp::BinaryExp(Exp* l, Exp* r, BinaryOp o)
-    : left(l), right(r), op(o) {}
+        : left(l), right(r), op(o) {}
 
 BinaryExp::~BinaryExp() {
     delete left;
@@ -70,7 +70,7 @@ AssignStm::~AssignStm() {}
 
 //                     TernaryExp
 TernaryExp::TernaryExp(Exp* c, Exp* t, Exp* e)
-    : cond(c), thenExp(t), elseExp(e) {}
+        : cond(c), thenExp(t), elseExp(e) {}
 
 TernaryExp::~TernaryExp() {
     delete cond;
@@ -80,13 +80,13 @@ TernaryExp::~TernaryExp() {
 
 //                     IfStm
 IfStm::IfStm(Exp* c, Body* t, Body* e)
-    : cond(c), then(t), els(e) {}
+        : cond(c), then(t), els(e) {}
 
 IfStm::~IfStm() {}
 
 //                     WhileStm
 WhileStm::WhileStm(Exp* c, Body* t)
-    : cond(c), b(t) {}
+        : cond(c), b(t) {}
 
 WhileStm::~WhileStm() {}
 

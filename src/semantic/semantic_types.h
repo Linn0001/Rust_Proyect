@@ -35,18 +35,18 @@ public:
     };
 
     static inline unordered_map<Type::TType, TypeInfo> TYPE_TABLE = {
-        { Type::BOOL, {1, 1} },
-        { Type::I8,   {1, 1} },
-        { Type::I16,  {2, 2} },
-        { Type::I32,  {4, 4} },
-        { Type::I64,  {8, 8} },
-        { Type::U8,   {1, 1} },
-        { Type::U16,  {2, 2} },
-        { Type::U32,  {4, 4} },
-        { Type::U64,  {8, 8} },
-        { Type::F32,  {4, 4} },
-        { Type::F64,  {8, 8} },
-        { Type::UNIT, {0, 1} }
+            { Type::BOOL, {1, 1} },
+            { Type::I8,   {1, 1} },
+            { Type::I16,  {2, 2} },
+            { Type::I32,  {4, 4} },
+            { Type::I64,  {8, 8} },
+            { Type::U8,   {1, 1} },
+            { Type::U16,  {2, 2} },
+            { Type::U32,  {4, 4} },
+            { Type::U64,  {8, 8} },
+            { Type::F32,  {4, 4} },
+            { Type::F64,  {8, 8} },
+            { Type::UNIT, {0, 1} }
     };
 
     // Comparación por igualdad
@@ -123,19 +123,19 @@ public:
 
 // Nombre legible (para debugging)
 inline const char* Type::type_names[13] = {
-    "notype",
-    "unit",
-    "bool",
-    "i8",
-    "i16",
-    "i32",
-    "i64",
-    "u8",
-    "u16",
-    "u32",
-    "u64",
-    "f32",
-    "f64"
+        "notype",
+        "unit",
+        "bool",
+        "i8",
+        "i16",
+        "i32",
+        "i64",
+        "u8",
+        "u16",
+        "u32",
+        "u64",
+        "f32",
+        "f64"
 };
 
 #endif // RUST_PROJECT_SEMANTIC_TYPES_H
