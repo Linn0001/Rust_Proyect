@@ -6,13 +6,13 @@ using namespace std;
 // Constructores
 
 Token::Token(Type type)
-    : type(type), text("") { }
+        : type(type), text("") { }
 
 Token::Token(Type type, char c)
-    : type(type), text(string(1, c)) { }
+        : type(type), text(string(1, c)) { }
 
 Token::Token(Type type, const string& source, int first, int last)
-    : type(type), text(source.substr(first, last)) { }
+        : type(type), text(source.substr(first, last)) { }
 
 // Sobrecarga de operador <<
 
@@ -24,7 +24,7 @@ ostream& operator<<(ostream& outs, const Token& tok) {
         case Token::END:     outs << "TOKEN(END)"; break;
         case Token::ERR:     outs << "TOKEN(ERR, \"" << tok.text << "\")"; break;
 
-        // Palabras clave
+            // Palabras clave
         case Token::FN:       outs << "TOKEN(FN, \"" << tok.text << "\")"; break;
         case Token::LET:      outs << "TOKEN(LET, \"" << tok.text << "\")"; break;
         case Token::MUT:      outs << "TOKEN(MUT, \"" << tok.text << "\")"; break;
@@ -40,13 +40,13 @@ ostream& operator<<(ostream& outs, const Token& tok) {
         case Token::FALSE:    outs << "TOKEN(FALSE, \"" << tok.text << "\")"; break;
         case Token::QMARK:   outs << "TOKEN(QMARK, \"" << tok.text << "\")"; break;
 
-        // Identificadores y literales
+            // Identificadores y literales
         case Token::ID:       outs << "TOKEN(ID, \"" << tok.text << "\")"; break;
         case Token::NUM:   outs << "TOKEN(NUMBER, \"" << tok.text << "\")"; break;
         case Token::FLOAT:    outs << "TOKEN(FLOAT, \"" << tok.text << "\")"; break;
         case Token::STRING:   outs << "TOKEN(STRING, \"" << tok.text << "\")"; break;
 
-        // Operadores
+            // Operadores
         case Token::ASSIGN:   outs << "TOKEN(ASSIGN, \"" << tok.text << "\")"; break;
         case Token::PLUS:     outs << "TOKEN(PLUS, \"" << tok.text << "\")"; break;
         case Token::MINUS:    outs << "TOKEN(MINUS, \"" << tok.text << "\")"; break;
@@ -60,7 +60,7 @@ ostream& operator<<(ostream& outs, const Token& tok) {
         case Token::LE:       outs << "TOKEN(LE, \"" << tok.text << "\")"; break;
         case Token::EQ:       outs << "TOKEN(EQ, \"" << tok.text << "\")"; break;
 
-        // Símbolos
+            // Símbolos
         case Token::LPAREN:   outs << "TOKEN(LPAREN, \"" << tok.text << "\")"; break;
         case Token::RPAREN:   outs << "TOKEN(RPAREN, \"" << tok.text << "\")"; break;
         case Token::LBRACE:   outs << "TOKEN(LBRACE, \"" << tok.text << "\")"; break;

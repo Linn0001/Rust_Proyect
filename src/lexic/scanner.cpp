@@ -146,7 +146,7 @@ Token* Scanner::nextToken() {
             return new Token(Token::GE, input, first, 2);
         }
 
-        if (c == '*' && input[current+1] == '*') {
+        if (c == ' ' && input[current+1] == ' ') {
             current += 2;
             return new Token(Token::POW, input, first, 2);
         }

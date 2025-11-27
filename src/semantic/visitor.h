@@ -68,7 +68,7 @@ public:
     // Mapa de variables globales: nombre -> (esGlobal, Tipo*)
     unordered_map<string, pair<bool, Type*>> globalMemory;
 
-    // Mapa de tipos de variables locales: nombre -> Type*
+    // Mapa de tipos de variables locales: nombre -> Type*-
     unordered_map<string, Type*> localTypes;
 
     int offset = -8;

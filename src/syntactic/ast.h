@@ -9,7 +9,7 @@
 using namespace std;
 
 
-// Forward declarations
+// Forward declarations-
 class Visitor;
 class VarDec;
 class TypeVisitor;

@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <title>Simulador x86-64 Assembly</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: #020617;
+            color: #e5e7eb;
+        }
+        header {
+            padding: 12px 20px;
+            background: #020617;
+            border-bottom: 1px solid #1e293b;
+            text-align: center;
+        }
+        header h1 {
+            margin: 0;
+            font-size: 20px;
+            color: #f9fafb;
+        }
+        header span {
+            font-size: 12px;
+            color: #9ca3af;
+        }
+
+        main {
+            padding: 10px;
+            display: grid;
+            grid-template-columns: 2.5fr 1.2fr;
+            grid-template-rows: auto 230px;
+            grid-template-areas:
+        "code regs"
+        "stack stack";
+            gap: 12px;
+            height: calc(100vh - 64px);
+        }
+
+        .panel {
+            background: #020617;
+            border-radius: 10px;
+            border: 1px solid #111827;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .panel h2 {
+            margin: 0 0 8px 0;
+            font-size: 14px;
+            color: #facc15;
+        }
+
+        #codePanel { grid-area: code; }
+        #regsPanel { grid-area: regs; }
+        #stackPanel { grid-area: stack; }
+
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .small { font-size: 11px; color: #9ca3af; }
+
+        input[type="file"] {
+            font-size: 11px;
+            color: #e5e7eb;
+        }
+
+        button {
+            border: none;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        button.primary { background: #2563eb; color: white; }
+        button.secondary { background: #16a34a; color: white; }
+        button.danger { background: #dc2626; color: white; }
+        button:disabled { opacity: 0.4; cursor: default; }
+
+        .code-list {
+            flex: 1;
+            background: #020617;
+            border-radius: 8px;
+            border: 1px solid #1f2937;
+            overflow: auto;
+            font-family: "JetBrains Mono", monospace;
+            font-size: 13px;
+        }
+        .code-line {
+            padding: 2px 8px;
+            border-bottom: 1px solid #0f172a;
+            display: flex;
+            gap: 8px;
+        }
+        .code-line span.idx {
+            width: 34px;
+            text-align: right;
+            color: #6b7280;
+        }
+        .code-line span.text {
+            flex: 1;
+            white-space: pre;
+        }
+        .code-line.active {
+            background: #facc15;
+            color: #0f172a;
+        }
+
+        textarea {
+            width: 100%;
+            height: 80px;
+            margin-top: 6px;
+            border-radius: 6px;
+            border: 1px solid #1f2937;
+            background: #020617;
+            color: #e5e7eb;
+            font-family: "JetBrains Mono", monospace;
+            font-size: 12px;
+            padding: 6px;
+            resize: none;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        th, td {
+            padding: 4px 6px;
+            border-bottom: 1px solid #111827;
+        }
+        th {
+            text-align: left;
+            background: #111827;
+            color: #f9fafb;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+        tbody tr:nth-child(odd) { background: #020617; }
+        tbody tr:nth-child(even) { background: #030712; }
+        tbody tr.highlight { background: #1d4ed8; }
+
+    </style>
+</head>
+<body>
+<header>
+    <h1>Simulador x86-64 Assembly</h1>
+</header>
+
+<main>
+    <!-- CÓDIGO ASSEMBLY -->
+    <section id="codePanel" class="panel">
+        <h2>Código Assembly</h2>
+        <div class="toolbar">
+            <label class="small">
+                Cargar .s:
+                <input type="file" id="asmFileInput" accept=".s,.asm,.txt" />
+            </label>
+            <label class="small">
+                Cargar trace JSON:
+                <input type="file" id="traceFileInput" accept=".json" />
+            </label>
+            <button id="btnPrev" class="primary" disabled>&larr; Siguiente línea</button>
+            <button id="btnNext" class="primary" disabled>Siguiente línea &rarr;</button>
+            <button id="btnPlay" class="secondary" disabled>Ejecutar todo</button>
+            <button id="btnReset" class="danger" disabled>Reiniciar</button>
+            <span id="stepInfo" class="small"></span>
+        </div>
+        <div id="asmView" class="code-list"></div>
+        <textarea id="logArea" readonly placeholder="Mensajes del simulador..."></textarea>
+    </section>
+
+    <!-- REGISTROS -->
+    <section id="regsPanel" class="panel">
+        <h2>Registros</h2>
+        <table>
+            <thead>
+            <tr><th>Registro</th><th>Valor</th></tr>
+            </thead>
+            <tbody id="regsBody">
+            <tr><td>RAX</td><td id="regRAX">0</td></tr>
+            <tr><td>RCX</td><td id="regRCX">0</td></tr>
+            <tr><td>RSI</td><td id="regRSI">-</td></tr>
+            <tr><td>RDI</td><td id="regRDI">-</td></tr>
+            </tbody>
+        </table>
+
+        <div style="margin-top:10px;">
+            <div class="small">Flags</div>
+            <table>
+                <tbody>
+                <tr><td style="width:60px;">Zero (ZF)</td><td id="flagZF">0</td></tr>
+                <tr><td>Sign (SF)</td><td id="flagSF">0</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- PILA -->
+    <section id="stackPanel" class="panel">
+        <h2>PILA</h2>
+        <div class="small" style="margin-bottom:6px;">
+            Slots de pila lógicos (offsets simulados desde tu trace).
+        </div>
+        <div style="overflow:auto; flex:1;">
+            <table>
+                <thead>
+                <tr>
+                    <th>Offset</th>
+                    <th>Valor</th>
+                    <th>Puntero</th>
+                </tr>
+                </thead>
+                <tbody id="stackBody">
+                <!-- filas dinámicas -->
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+
+<script>
+    let asmLines = [];
+    let steps = [];    // steps del trace
+    let currentStep = 0;
+    let playTimer = null;
+    let codeStartLine = 0; // fallback por si el JSON no trae "line"
+
+    // ========= helpers para formatear valores =========
+
+    function formatScalar(val) {
+        if (val === null || val === undefined) return "";
+        if (typeof val === "boolean") return val ? "true" : "false";
+        if (typeof val === "number") return String(val);
+        return String(val);
+    }
+
+    // Permite que cada registro/slot pueda ser:
+    //  - un valor primitivo (number/bool/string)
+    //  - un objeto con { value_str, value, type, bits, ... }
+    function formatValueFromContainer(container) {
+        if (container === null || container === undefined) return "";
+
+        // Si viene como objeto enriquecido
+        if (typeof container === "object" && !Array.isArray(container)) {
+            if (typeof container.value_str === "string") {
+                return container.value_str;          // representación bonita generada en C++
+            }
+            if (typeof container.display === "string") {
+                return container.display;            // alias opcional
+            }
+            if ("value" in container) {
+                return formatScalar(container.value);
+            }
+        }
+
+        // Si es primitivo
+        return formatScalar(container);
+    }
+
+    function formatRegValue(regVal) {
+        return formatValueFromContainer(regVal);
+    }
+
+    function formatStackValue(row) {
+        // row suele tener offset, value, label, type, bits...
+        return formatValueFromContainer(row);
+    }
+
+    // ========= helpers de render =========
+
+    function getActiveAsmIndex() {
+        if (!steps.length || !asmLines.length) return -1;
+
+        const step = steps[currentStep] || {};
+
+        // 1) Usar la línea que viene del JSON (1-based)
+        if (typeof step.line === "number" && !isNaN(step.line)) {
+            let idx = step.line - 1;
+            if (idx < 0) idx = 0;
+            if (idx >= asmLines.length) idx = asmLines.length - 1;
+            return idx;
+        }
+
+        // 2) Fallback antiguo
+        let idx = codeStartLine + currentStep;
+        if (idx < 0) idx = 0;
+        if (idx >= asmLines.length) idx = asmLines.length - 1;
+        return idx;
+    }
+
+    function renderAsm() {
+        const container = document.getElementById("asmView");
+        container.innerHTML = "";
+
+        const activeIdx = getActiveAsmIndex();
+
+        asmLines.forEach((line, idx) => {
+            const div = document.createElement("div");
+            div.className = "code-line" + (idx === activeIdx ? " active" : "");
+            const idxSpan = document.createElement("span");
+            idxSpan.className = "idx";
+            idxSpan.textContent = idx + 1;
+            const textSpan = document.createElement("span");
+            textSpan.className = "text";
+            textSpan.textContent = line;
+            div.appendChild(idxSpan);
+            div.appendChild(textSpan);
+            container.appendChild(div);
+        });
+
+        if (activeIdx >= 0) {
+            const activeEl = container.children[activeIdx];
+            if (activeEl) {
+                activeEl.scrollIntoView({ block: "center" });
+            }
+        }
+    }
+
+    function renderRegsAndStack() {
+        if (!steps.length) return;
+        const step = steps[currentStep] || {};
+
+        // Aquí se define regs y vive en TODO el cuerpo de la función
+        const regs = step.registers || step.regs || {};
+
+        const rax = regs.RAX ?? 0;
+        const rcx = regs.RCX ?? 0;
+
+        document.getElementById("regRAX").textContent = rax;
+        document.getElementById("regRCX").textContent = rcx;
+        document.getElementById("regRSI").textContent = regs.RSI ?? "-";
+        document.getElementById("regRDI").textContent = regs.RDI ?? "-";
+
+        document.getElementById("flagZF").textContent = regs.ZF ?? 0;
+        document.getElementById("flagSF").textContent = regs.SF ?? 0;
+
+        const stackBody = document.getElementById("stackBody");
+        stackBody.innerHTML = "";
+
+        const stack = step.stack || [];
+        stack.forEach(row => {
+            const tr = document.createElement("tr");
+            const tdOff = document.createElement("td");
+            const tdVal = document.createElement("td");
+            const tdPtr = document.createElement("td");
+
+            tdOff.textContent = row.offset;
+
+            // Usar value_str si viene del JSON; si no, usar value numérico
+            let valText;
+            if (row.value_str !== undefined && row.value_str !== null && row.value_str !== "") {
+                valText = row.value_str;
+            } else {
+                valText = row.value;
+            }
+            tdVal.textContent = valText;
+
+            let ptr = "";
+            if (row.label === "RBP_OLD" || row.offset === 0) {
+                ptr = "RBP";
+            }
+            if (typeof regs.RSP === "number" && row.offset === regs.RSP) {
+                ptr = ptr ? (ptr + "/RSP") : "RSP";
+            }
+            if (!ptr && row.label) ptr = row.label;
+
+            tdPtr.textContent = ptr;
+
+            tr.appendChild(tdOff);
+            tr.appendChild(tdVal);
+            tr.appendChild(tdPtr);
+            stackBody.appendChild(tr);
+        });
+
+        const info = document.getElementById("stepInfo");
+        info.textContent = `Paso ${currentStep + 1}/${steps.length}`;
+
+        const logArea = document.getElementById("logArea");
+        logArea.value = (step.label || step.msg || step.message || "") + "\n" + logArea.value;
+    }
+
+
+    function renderAll() {
+        renderAsm();
+        if (steps.length) renderRegsAndStack();
+        updateButtons();
+    }
+
+    function updateButtons() {
+        const hasSteps = steps.length > 0;
+        document.getElementById("btnPrev").disabled  = !hasSteps || currentStep <= 0;
+        document.getElementById("btnNext").disabled  = !hasSteps || currentStep >= steps.length - 1;
+        document.getElementById("btnPlay").disabled  = !hasSteps;
+        document.getElementById("btnReset").disabled = !hasSteps;
+    }
+
+    // --------- manejadores de carga ---------
+
+    document.getElementById("asmFileInput").addEventListener("change", e => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = evt => {
+            const text = evt.target.result;
+            asmLines = text.split(/\r?\n/);
+
+            codeStartLine = 0;
+            const mainIdx = asmLines.findIndex(l => l.trim().startsWith("main:"));
+            if (mainIdx >= 0 && mainIdx + 1 < asmLines.length) {
+                codeStartLine = mainIdx + 1;
+            }
+
+            renderAll();
+        };
+        reader.readAsText(file);
+    });
+
+    document.getElementById("traceFileInput").addEventListener("change", e => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = evt => {
+            try {
+                const json = JSON.parse(evt.target.result);
+                steps = Array.isArray(json) ? json : (json.steps || []);
+                currentStep = 0;
+                document.getElementById("logArea").value = "";
+                renderAll();
+            } catch (err) {
+                alert("Error al leer JSON: " + err);
+            }
+        };
+        reader.readAsText(file);
+    });
+
+    // --------- controles de ejecución ---------
+
+    document.getElementById("btnPrev").addEventListener("click", () => {
+        if (currentStep > 0) {
+            currentStep--;
+            renderAll();
+        }
+    });
+
+    document.getElementById("btnNext").addEventListener("click", () => {
+        if (currentStep < steps.length - 1) {
+            currentStep++;
+            renderAll();
+        }
+    });
+
+    document.getElementById("btnReset").addEventListener("click", () => {
+        currentStep = 0;
+        document.getElementById("logArea").value = "";
+        renderAll();
+    });
+
+    document.getElementById("btnPlay").addEventListener("click", () => {
+        if (playTimer) {
+            clearInterval(playTimer);
+            playTimer = null;
+            document.getElementById("btnPlay").textContent = "Ejecutar todo";
+            return;
+        }
+        document.getElementById("btnPlay").textContent = "Pausar";
+        playTimer = setInterval(() => {
+            if (currentStep < steps.length - 1) {
+                currentStep++;
+                renderAll();
+            } else {
+                clearInterval(playTimer);
+                playTimer = null;
+                document.getElementById("btnPlay").textContent = "Ejecutar todo";
+            }
+        }, 500);
+    });
+</script>
+
+</body>
+</html>
